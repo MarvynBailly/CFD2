@@ -1,10 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from math import sqrt
+import time
 
 from tri import solve_tridiagonal
 
-def main(condition=0):
+def main(condition=0, show_plots=True):
     # -------------------------------------------------------------------------
     # Parameters (translated from lsd.m)
     # -------------------------------------------------------------------------
@@ -126,7 +127,7 @@ def main(condition=0):
                      0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0])
     potcp = np.array([1.0, 0.282, -0.061, -0.237, -0.325, -0.341, -0.341, -0.341,
                       -0.329, -0.309, -0.284, -0.237, -0.190, -0.138, -0.094, -0.040,
-                      0.04, 0.075, 1.0])
+                      0.04, 0.075, 1.0]) 
     
     print("DX1 is", dx1, "DY1 is", dy1)
     print("XMAX is", x[-1], "YMAX is", y[-1])
@@ -253,18 +254,19 @@ def main(condition=0):
         cpu[-1] = -2 * ((phi[-1, kmax-1] - phi[-2, kmax-1]) / (x[-1] - x[-2]))
         
         # Plot pressure coefficient along airfoil and upper wall
-        plt.figure(3)
-        plt.clf()
-        plt.plot(x, -cp, 'm', marker='o', linewidth=2, markersize=10, label='Airfoil')
-        plt.plot(x, -cpu, 'r', marker='+', linewidth=2, markersize=10, label='Upper wall')
-        plt.plot(potx, -potcp/np.sqrt(1 - minf**2), 'gx', linewidth=2, markersize=10, label='External Data')
-        plt.axis([-0.5, 1.5, -1.4, 1.0])
-        plt.title(f'-Cp as a function of x/c at iteration {it}')
-        plt.xlabel('x/c')
-        plt.ylabel('-Cp')
-        plt.grid(True)
-        plt.legend()
-        plt.pause(0.001)
+        if show_plots:
+            plt.figure(3)
+            plt.clf()
+            plt.plot(x, -cp, 'm', marker='o', linewidth=2, markersize=10, label='Airfoil')
+            plt.plot(x, -cpu, 'r', marker='+', linewidth=2, markersize=10, label='Upper wall')
+            plt.plot(potx, -potcp/np.sqrt(1 - minf**2), 'gx', linewidth=2, markersize=10, label='External Data')
+            plt.axis([-0.5, 1.5, -1.4, 1.0])
+            plt.title(f'-Cp as a function of x/c at iteration {it}')
+            plt.xlabel('x/c')
+            plt.ylabel('-Cp')
+            plt.grid(True)
+            plt.legend()
+            plt.pause(0.001)
         
         # Plot Cp contours if required
         if it < 10 or it % itplot == 0:
@@ -277,25 +279,30 @@ def main(condition=0):
                         ((phi[j, k] - phi[j-1, k]) / dx[j]) * (dxm2[j] / dxp2[j])
                     )
                 cpg[-1, k] = -2 * ((phi[-1, k] - phi[-2, k]) / (x[-1] - x[-2]))
-            plt.figure(2)
-            plt.clf()
-            cp_levels = 50
-            cp_contours = plt.contour(xmesh, ymesh, cpg, cp_levels)
-            plt.axis([-0.25, 1.25, 0.0, 1.5])
-            plt.title(f'Cp contours at iteration {it}')
-            plt.xlabel('x/c')
-            plt.ylabel('y/c')
-            plt.pause(0.001)
+            if show_plots:
+                plt.figure(2)
+                plt.clf()
+                cp_levels = 50
+                cp_contours = plt.contour(xmesh, ymesh, cpg, cp_levels)
+                plt.axis([-0.25, 1.25, 0.0, 1.5])
+                plt.title(f'Cp contours at iteration {it}')
+                plt.xlabel('x/c')
+                plt.ylabel('y/c')
+                plt.pause(0.001)
     
     # Plot the residual history
-    plt.figure(4)
-    plt.semilogy(range(1, it+1), l2reshist[:it], 'm-', linewidth=2)
-    plt.title('Log of L2-norm as a function of iteration')
-    plt.xlabel('Iteration')
-    plt.ylabel('Log of L2-norm')
-    plt.grid(True)
-    plt.show()
+    if show_plots:
+        plt.figure(4)
+        plt.semilogy(range(1, it+1), l2reshist[:it], 'm-', linewidth=2)
+        plt.title('Log of L2-norm as a function of iteration')
+        plt.xlabel('Iteration')
+        plt.ylabel('Log of L2-norm')
+        plt.grid(True)
+        plt.show()
 
 if __name__ == '__main__':
-    main(1)
+    start_time = time.time()
+    main(1, False)
+    end_time = time.time()
 
+    print("Elapsed time:", end_time - start_time, "seconds")
