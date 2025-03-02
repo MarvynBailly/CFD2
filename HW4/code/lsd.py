@@ -2,32 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from math import sqrt
 
-def solve_tridiagonal(a, b, c, f):
-    """
-    Thomas algorithm to solve tridiagonal system.
-    Input arrays a, b, c, and f are 1D NumPy arrays.
-    This function modifies f in place and returns the solution.
-    (Based on tri.m)
-    """
-    M = len(a)
-    x = np.zeros(M)
-    # forward sweep
-    x[0] = c[0] / b[0]
-    f[0] = f[0] / b[0]
-    for j in range(1, M):
-        z = 1.0 / (b[j] - a[j] * x[j-1])
-        x[j] = c[j] * z
-        f[j] = (f[j] - a[j] * f[j-1]) * z
-    # backward sweep
-    for j in range(M-2, -1, -1):
-        f[j] = f[j] - x[j] * f[j+1]
-    return f
+from tri import solve_tridiagonal
 
-def main():
+def main(condition=0):
     # -------------------------------------------------------------------------
     # Parameters (translated from lsd.m)
     # -------------------------------------------------------------------------
-    condition = 0
     minf = 0.0 if condition == 1 else 0.70   # Freestream Mach number
     thickness = 0.10                         # Airfoil thickness
 
@@ -83,6 +63,7 @@ def main():
     for i in range(j_le - kconst - 2, -1, -1):
         x[i] = x[i+1] + (x[i+1] - x[i+2]) * xsf
 
+
     # Downstream stretching (MATLAB: for ji=j_te+kconst+1:1:jmax)
     for i in range(j_te + kconst, jmax):
         x[i] = x[i-1] + (x[i-1] - x[i-2]) * xsf
@@ -119,8 +100,8 @@ def main():
     dxp2 = 1.0 / (dx ** 2)
     dxm2 = 1.0 / (dx ** 2)
     for j in range(1, jmax-1):
-        dxp2[j] = dx[j] / (x[j+1] - x[j])
-        dxm2[j] = dx[j] / (x[j] - x[j-1])
+        dxp2[j] = 1 / (dx[j]* (x[j+1] - x[j]))
+        dxm2[j] = 1 / (dx[j]* (x[j] - x[j-1]))
 
     # Calculate spacing in y-direction
     dy = np.full(kmax, dy1)
@@ -133,8 +114,8 @@ def main():
     dyp2 = 1.0 / (dy ** 2)
     dym2 = 1.0 / (dy ** 2)
     for k in range(1, kmax-1):
-        dyp2[k] = dy[k] / (y[k+1] - y[k])
-        dym2[k] = dy[k] / (y[k] - y[k-1])
+        dyp2[k] = 1 / (dy[k] * (y[k+1] - y[k]))
+        dym2[k] = 1 / (dy[k] * (y[k] - y[k-1]))
 
     # -------------------------------------------------------------------------
     # Initialization
@@ -157,6 +138,7 @@ def main():
     ax1.set_title('Mesh')
     ax1.set_xlabel('x/c')
     ax1.set_ylabel('y/c')
+    
 
     # Pre-allocate arrays for SLOR iterations
     a = np.zeros(kmax)
@@ -315,5 +297,5 @@ def main():
     plt.show()
 
 if __name__ == '__main__':
-    main()
+    main(1)
 
