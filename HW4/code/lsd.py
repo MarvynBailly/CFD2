@@ -16,6 +16,8 @@ def main(condition=0, show_plots=True):
     omega = 1.97
     itmax = 800
     itplot = 200
+    
+    gamma = 1.4
 
     # Mesh input parameters
     # case from hw3
@@ -26,7 +28,7 @@ def main(condition=0, show_plots=True):
         kmax = 33     # total y points
         xsf = 1.18    # x stretching factor
         ysf = 1.18    # y stretching factor
-        airfoil_type = 0   # airfoil type - 0 for NACA0010 and 1 for biconvex airfoil
+        airfoil_type = 1   # airfoil type - 0 for NACA0010 and 1 for biconvex airfoil
     else:
         j_le = 63
         j_te = 123
@@ -216,6 +218,14 @@ def main(condition=0, show_plots=True):
             istop = True
         
         print(f"Iteration {it} : L2(RES) = {l2res}")
+        
+        # Compute A matrix
+        A = np.zeros((jmax, kmax))
+        for j in range(1, jmax-1):
+            for k in range(1, kmax-1):
+                A[j, k] = 1 - minf**2 - minf**2*(gamma + 1) * 1 * 1/dx[j] * ( (phi[j+1, k] - phi[j, k]) * (x[j] - x[j-1]) / (x[j+1] - x[j]) + (phi[j, k] - phi[j-1, k]) * (x[j+1] - x[j]) / (x[j] - x[j-1]))
+
+
 
         # --- SLOR update using tridiagonal solver along each interior x-row ---
         dphi = np.zeros((jmax, kmax))
@@ -310,7 +320,7 @@ def main(condition=0, show_plots=True):
 
 if __name__ == '__main__':
     start_time = time.time()
-    main(1, False)
+    main(1, True)
     end_time = time.time()
 
     print("Elapsed time:", end_time - start_time, "seconds")
