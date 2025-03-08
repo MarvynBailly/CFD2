@@ -18,13 +18,15 @@ def main(condition=0, show_plots=True):
     itplot = 200
 
     # Mesh input parameters
-    if condition <= 2:
+    # case from hw3
+    if condition == 1:
         j_le = 33     # leading edge index
         j_te = 63     # trailing edge index
         jmax = 95     # total x points
         kmax = 33     # total y points
         xsf = 1.18    # x stretching factor
         ysf = 1.18    # y stretching factor
+        airfoil_type = 0   # airfoil type - 0 for NACA0010 and 1 for biconvex airfoil
     else:
         j_le = 63
         j_te = 123
@@ -166,13 +168,19 @@ def main(condition=0, show_plots=True):
         bc = np.zeros(jmax)
         # Loop from j_le to j_te (MATLAB indices) => Python indices: j_le-1 to j_te-1
         for j in range(j_le - 1, j_te):
-            x_int = 1.008930411365  # NACA00xx airfoil slope constant
-            # Avoid division by zero in sqrt; x[j] is positive in the airfoil region
-            dphidy = 5 * thickness * (0.2969 * 0.5 * sqrt(x_int / x[j])
-                                      - 0.126 * x_int
-                                      - 0.3516 * 2 * x_int**2 * x[j]
-                                      + 0.2843 * 3 * x_int**3 * x[j]**2
-                                      - 0.1015 * 4 * x_int**4 * x[j]**3)
+            # NACA00xx airfoil
+            if airfoil_type == 0:
+                x_int = 1.008930411365  # NACA00xx airfoil slope constant
+                # Avoid division by zero in sqrt; x[j] is positive in the airfoil region
+                dphidy = 5 * thickness * (0.2969 * 0.5 * sqrt(x_int / x[j])
+                                        - 0.126 * x_int
+                                        - 0.3516 * 2 * x_int**2 * x[j]
+                                        + 0.2843 * 3 * x_int**3 * x[j]**2
+                                        - 0.1015 * 4 * x_int**4 * x[j]**3)
+            # Biconvex airfoil
+            elif airfoil_type == 1:
+                dphidy = 2 * thickness * (1 - 2 * x[j])
+
             # Compute velocity in x-direction using central differences
             velx = 0.5 * (
                 ((phi[j+1, 0] - phi[j, 0]) / dx[j]) * (dxp2[j] / dxm2[j]) +
