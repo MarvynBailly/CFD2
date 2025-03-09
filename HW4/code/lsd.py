@@ -9,11 +9,11 @@ def main(condition=0, show_plots=True):
     # -------------------------------------------------------------------------
     # Parameters (translated from lsd.m)
     # -------------------------------------------------------------------------
-    minf = 0.0 if condition == 1 else 0.70   # Freestream Mach number
+    minf = 0.6 if condition == 1 else 0.80   # Freestream Mach number
     thickness = 0.10                         # Airfoil thickness
 
     # SLOR parameters
-    omega = 1.97
+    omega = 1.79
     itmax = 800
     itplot = 200
     
@@ -28,14 +28,15 @@ def main(condition=0, show_plots=True):
         kmax = 33     # total y points
         xsf = 1.18    # x stretching factor
         ysf = 1.18    # y stretching factor
-        airfoil_type = 1   # airfoil type - 0 for NACA0010 and 1 for biconvex airfoil
+        airfoil_type = 0   # airfoil type - 0 for NACA0010 and 1 for biconvex airfoil
     else:
-        j_le = 63
-        j_te = 123
-        jmax = 185
-        kmax = 63
-        xsf = 1.10
-        ysf = 1.10
+        j_le = 33
+        j_te = 73
+        jmax = 105
+        kmax = 43
+        xsf = 1.2
+        ysf = 1.2
+        airfoil_type = 1   
         if condition == 4:
             ysf = 1.0
 
@@ -43,7 +44,7 @@ def main(condition=0, show_plots=True):
     dxdy = 1.0      # ratio of dx to dy at airfoil surface
 
     # Upper wall boundary?
-    if condition == 4 or condition == 0:
+    if condition == 4 or condition == 2:
         iwall = 1
     else:
         iwall = 0
@@ -107,6 +108,10 @@ def main(condition=0, show_plots=True):
     for j in range(1, jmax-1):
         dxp2[j] = 1 / (dx[j]* (x[j+1] - x[j]))
         dxm2[j] = 1 / (dx[j]* (x[j] - x[j-1]))
+        
+    # set initial things
+    dxp2[0] = dxp2[1]
+    dxm2[0] = dxm2[1]
 
     # Calculate spacing in y-direction
     dy = np.full(kmax, dy1)
@@ -201,13 +206,23 @@ def main(condition=0, show_plots=True):
             for j in range(jmax):
                 phi[j, kmax-1] = phi[j, kmax-2]
 
+        # Compute A matrix
+        A = np.zeros((jmax, kmax))
+        for j in range(1, jmax-1):
+            for k in range(1, kmax-1):
+                A[j, k] = 1 - minf**2 - minf**2*(gamma + 1) * 1 * dx[j] * ( (phi[j+1, k] - phi[j, k]) * (x[j] - x[j-1]) / (x[j+1] - x[j]) + (phi[j, k] - phi[j-1, k]) * (x[j+1] - x[j]) / (x[j] - x[j-1]))
+                
         # --- Calculate residual and its L2 norm ---
         l2res = 0.0
         for k in range(1, kmax-1):
             for j in range(1, jmax-1):
-                res[j, k] = ((1 - minf**2) * 
+                res[j, k] = ((1 - minf**2)* 
                              ((phi[j+1, k] - phi[j, k]) * dxp2[j] - (phi[j, k] - phi[j-1, k]) * dxm2[j])
                              + ((phi[j, k+1] - phi[j, k]) * dyp2[k] - (phi[j, k] - phi[j, k-1]) * dym2[k]))
+                
+                # res[j, k] = (A[j,k]* 
+                            #  ((phi[j+1, k] - phi[j, k]) * dxp2[j] - (phi[j, k] - phi[j-1, k]) * dxm2[j])
+                            #  + ((phi[j, k+1] - phi[j, k]) * dyp2[k] - (phi[j, k] - phi[j, k-1]) * dym2[k]))
                 l2res += res[j, k] ** 2
         l2res = sqrt(l2res / (jmax * kmax))
         if it == 1:
@@ -219,14 +234,11 @@ def main(condition=0, show_plots=True):
         
         print(f"Iteration {it} : L2(RES) = {l2res}")
         
-        # Compute A matrix
-        A = np.zeros((jmax, kmax))
-        for j in range(1, jmax-1):
-            for k in range(1, kmax-1):
-                A[j, k] = 1 - minf**2 - minf**2*(gamma + 1) * 1 * 1/dx[j] * ( (phi[j+1, k] - phi[j, k]) * (x[j] - x[j-1]) / (x[j+1] - x[j]) + (phi[j, k] - phi[j-1, k]) * (x[j+1] - x[j]) / (x[j] - x[j-1]))
-
-
-
+        mu = np.where(A >= 0, 0, 1)
+        omega_jk = np.ones((jmax, kmax)) * omega
+        omega_jk[A <= 0] = 1
+        
+        
         # --- SLOR update using tridiagonal solver along each interior x-row ---
         dphi = np.zeros((jmax, kmax))
         for j in range(1, jmax-1):
@@ -239,9 +251,9 @@ def main(condition=0, show_plots=True):
             # Interior points k = 1 to kmax-2
             for k in range(1, kmax-1):
                 a[k] = dym2[k]
-                b[k] = -(dym2[k] + dyp2[k]) - (1 - minf**2) * (dxm2[j] + dxp2[j])
+                b[k] = -(1  - mu[j,k]) *(dym2[k] + dyp2[k]) - A[j,k] * (dxm2[j] + dxp2[j]) + mu[j,k] * A[j-1,k] * dxp2[j-1]
                 c[k] = dyp2[k]
-                f_arr[k] = -omega * (res[j, k] + (1 - minf**2) * dphi[j-1, k] * dxm2[j])
+                f_arr[k] = -omega_jk[j,k] * (1  - mu[j,k]) * (res[j, k] + A[j,k] * dphi[j-1, k] * dxm2[j]) + mu[j,k] * omega_jk[j,k] * A[j-1,k] * ((dxp2[j-1] + dxm2[j-1]) * dphi[j-1, k] - dxm2[j-1] * dphi[j-2, k])
             # k = kmax-1 (upper boundary)
             a[kmax-1] = 0.0
             b[kmax-1] = 1.0
@@ -320,7 +332,7 @@ def main(condition=0, show_plots=True):
 
 if __name__ == '__main__':
     start_time = time.time()
-    main(1, True)
+    main(2, True)
     end_time = time.time()
 
     print("Elapsed time:", end_time - start_time, "seconds")
