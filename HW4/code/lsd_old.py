@@ -1,65 +1,64 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from math import sqrt
-import time
 
-from tri import solve_tridiagonal
+def solve_tridiagonal(a, b, c, f):
+    """
+    Thomas algorithm to solve tridiagonal system.
+    Input arrays a, b, c, and f are 1D NumPy arrays.
+    This function modifies f in place and returns the solution.
+    (Based on tri.m)
+    """
+    M = len(a)
+    x = np.zeros(M)
+    # forward sweep
+    x[0] = c[0] / b[0]
+    f[0] = f[0] / b[0]
+    for j in range(1, M):
+        z = 1.0 / (b[j] - a[j] * x[j-1])
+        x[j] = c[j] * z
+        f[j] = (f[j] - a[j] * f[j-1]) * z
+    # backward sweep
+    for j in range(M-2, -1, -1):
+        f[j] = f[j] - x[j] * f[j+1]
+    return f
 
-def main(condition=0, show_plots=True):
+def main():
     # -------------------------------------------------------------------------
     # Parameters (translated from lsd.m)
     # -------------------------------------------------------------------------
+    condition = 0
+    minf = 0.8 #if condition == 1 else 0.80   # Freestream Mach number
     thickness = 0.10                         # Airfoil thickness
 
     # SLOR parameters
     omega = 1.97
-    itmax = 500
+    itmax = 800
     itplot = 200
-    
-    gamma = 1.4
 
     # Mesh input parameters
-    
-    # case from hw3
-    if condition == 1:
+    if condition <= 2:
         j_le = 33     # leading edge index
         j_te = 63     # trailing edge index
         jmax = 95     # total x points
         kmax = 33     # total y points
         xsf = 1.18    # x stretching factor
         ysf = 1.18    # y stretching factor
-        airfoil_type = 0   # airfoil type - 0 for NACA0010 and 1 for biconvex airfoil
-        minf = 0.0
     else:
-        j_le = 33
-        j_te = 73
-        jmax = 105
-        kmax = 43
-        xsf = 1.2
-        ysf = 1.2
-        if condition == 2:
-            minf = .8
-            airfoil_type = 0
-        elif condition == 3:
-            minf = 0.75
-            airfoil_type = 1
-        elif condition == 4:
-            minf = 0.8
-            airfoil_type = 0
-        elif condition == 5:
-            minf = 0.8
-            airfoil_type = 1
-        elif condition == 6:
-            minf = 0.75
-            airfoil_type = 0
+        j_le = 63
+        j_te = 123
+        jmax = 185
+        kmax = 63
+        xsf = 1.10
+        ysf = 1.10
+        if condition == 4:
             ysf = 1.0
-
 
     kconst = 3      # number of constant-spaced mesh points
     dxdy = 1.0      # ratio of dx to dy at airfoil surface
 
     # Upper wall boundary?
-    if condition == 6:
+    if condition == 4:
         iwall = 1
     else:
         iwall = 0
@@ -83,7 +82,6 @@ def main(condition=0, show_plots=True):
     # Convert: for i from (j_le - kconst - 1) down to 1 (MATLAB) => Python indices: from (j_le - kconst - 1 - 1) down to 0.
     for i in range(j_le - kconst - 2, -1, -1):
         x[i] = x[i+1] + (x[i+1] - x[i+2]) * xsf
-
 
     # Downstream stretching (MATLAB: for ji=j_te+kconst+1:1:jmax)
     for i in range(j_te + kconst, jmax):
@@ -121,12 +119,8 @@ def main(condition=0, show_plots=True):
     dxp2 = 1.0 / (dx ** 2)
     dxm2 = 1.0 / (dx ** 2)
     for j in range(1, jmax-1):
-        dxp2[j] = 1 / (dx[j]* (x[j+1] - x[j]))
-        dxm2[j] = 1 / (dx[j]* (x[j] - x[j-1]))
-        
-    # set initial things
-    dxp2[0] = dxp2[1]
-    dxm2[0] = dxm2[1]
+        dxp2[j] = 1 / (dx[j] * (x[j+1] - x[j]))
+        dxm2[j] = 1 / (dx[j] * (x[j] - x[j-1]))
 
     # Calculate spacing in y-direction
     dy = np.full(kmax, dy1)
@@ -151,7 +145,7 @@ def main(condition=0, show_plots=True):
                      0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0])
     potcp = np.array([1.0, 0.282, -0.061, -0.237, -0.325, -0.341, -0.341, -0.341,
                       -0.329, -0.309, -0.284, -0.237, -0.190, -0.138, -0.094, -0.040,
-                      0.04, 0.075, 1.0]) 
+                      0.04, 0.075, 1.0])
     
     print("DX1 is", dx1, "DY1 is", dy1)
     print("XMAX is", x[-1], "YMAX is", y[-1])
@@ -163,7 +157,6 @@ def main(condition=0, show_plots=True):
     ax1.set_title('Mesh')
     ax1.set_xlabel('x/c')
     ax1.set_ylabel('y/c')
-    
 
     # Pre-allocate arrays for SLOR iterations
     a = np.zeros(kmax)
@@ -190,19 +183,13 @@ def main(condition=0, show_plots=True):
         bc = np.zeros(jmax)
         # Loop from j_le to j_te (MATLAB indices) => Python indices: j_le-1 to j_te-1
         for j in range(j_le - 1, j_te):
-            # NACA00xx airfoil
-            if airfoil_type == 0:
-                x_int = 1.008930411365  # NACA00xx airfoil slope constant
-                # Avoid division by zero in sqrt; x[j] is positive in the airfoil region
-                dphidy = 5 * thickness * (0.2969 * 0.5 * sqrt(x_int / x[j])
-                                        - 0.126 * x_int
-                                        - 0.3516 * 2 * x_int**2 * x[j]
-                                        + 0.2843 * 3 * x_int**3 * x[j]**2
-                                        - 0.1015 * 4 * x_int**4 * x[j]**3)
-            # Biconvex airfoil
-            elif airfoil_type == 1:
-                dphidy = 2 * thickness * (1 - 2 * x[j])
-
+            x_int = 1.008930411365  # NACA00xx airfoil slope constant
+            # Avoid division by zero in sqrt; x[j] is positive in the airfoil region
+            dphidy = 5 * thickness * (0.2969 * 0.5 * sqrt(x_int / x[j])
+                                      - 0.126 * x_int
+                                      - 0.3516 * 2 * x_int**2 * x[j]
+                                      + 0.2843 * 3 * x_int**3 * x[j]**2
+                                      - 0.1015 * 4 * x_int**4 * x[j]**3)
             # Compute velocity in x-direction using central differences
             velx = 0.5 * (
                 ((phi[j+1, 0] - phi[j, 0]) / dx[j]) * (dxp2[j] / dxm2[j]) +
@@ -221,22 +208,13 @@ def main(condition=0, show_plots=True):
             for j in range(jmax):
                 phi[j, kmax-1] = phi[j, kmax-2]
 
-        # Compute A matrix
-        A = np.zeros((jmax, kmax))
-        for j in range(1, jmax-1):
-            for k in range(1, kmax-1):
-                A[j, k] = 1 - minf**2 - minf**2*(gamma + 1) * 1 * 1/(x[j+1] - x[j-1]) * ( (phi[j+1, k] - phi[j, k]) * (x[j] - x[j-1]) / (x[j+1] - x[j]) \
-                    + (phi[j, k] - phi[j-1, k]) * (x[j+1] - x[j]) / (x[j] - x[j-1]))
-
-                
         # --- Calculate residual and its L2 norm ---
         l2res = 0.0
         for k in range(1, kmax-1):
             for j in range(1, jmax-1):
-                res[j, k] = (A[j,k] *
+                res[j, k] = ((1 - minf**2) * 
                              ((phi[j+1, k] - phi[j, k]) * dxp2[j] - (phi[j, k] - phi[j-1, k]) * dxm2[j])
                              + ((phi[j, k+1] - phi[j, k]) * dyp2[k] - (phi[j, k] - phi[j, k-1]) * dym2[k]))
-                
                 l2res += res[j, k] ** 2
         l2res = sqrt(l2res / (jmax * kmax))
         if it == 1:
@@ -247,12 +225,7 @@ def main(condition=0, show_plots=True):
             istop = True
         
         print(f"Iteration {it} : L2(RES) = {l2res}")
-        
-        mu = np.where(A >= 0, 0, 1)
-        omega_jk = np.ones((jmax, kmax)) * omega
-        omega_jk[A < 0] = 1
-        
-        
+
         # --- SLOR update using tridiagonal solver along each interior x-row ---
         dphi = np.zeros((jmax, kmax))
         for j in range(1, jmax-1):
@@ -265,9 +238,9 @@ def main(condition=0, show_plots=True):
             # Interior points k = 1 to kmax-2
             for k in range(1, kmax-1):
                 a[k] = dym2[k]
-                b[k] = -(1  - mu[j,k]) *(dym2[k] + dyp2[k] + A[j,k] * (dxm2[j] + dxp2[j])) + mu[j-1,k] * A[j-1,k] * dxp2[j-1]
+                b[k] = -(dym2[k] + dyp2[k]) - (1 - minf**2) * (dxm2[j] + dxp2[j])
                 c[k] = dyp2[k]
-                f_arr[k] = -omega_jk[j,k] * (1  - mu[j,k]) *  A[j,k] * (res[j, k] + dphi[j-1, k] * dxm2[j]) - mu[j-1,k] * omega_jk[j,k] * A[j-1,k] * ((dxp2[j-1] + dxm2[j-1]) * dphi[j-1, k] - dxm2[j-1] * dphi[j-2, k])
+                f_arr[k] = -omega * (res[j, k] + (1 - minf**2) * dphi[j-1, k] * dxm2[j])
             # k = kmax-1 (upper boundary)
             a[kmax-1] = 0.0
             b[kmax-1] = 1.0
@@ -297,28 +270,19 @@ def main(condition=0, show_plots=True):
         cp[-1] = -2 * ((phi[-1, 0] - phi[-2, 0]) / (x[-1] - x[-2]))
         cpu[-1] = -2 * ((phi[-1, kmax-1] - phi[-2, kmax-1]) / (x[-1] - x[-2]))
         
-        # --- Compute number of supersonic points ---
-        supersonic_points = np.sum(A < 0)
-        
-        # mach = np.sqrt((1 - cp) / ((gamma - 1) / 2))
-
-        # supersonic_points2 = np.sum(mach > 1)
-        
-        print(f"Number of supersonic points: {supersonic_points}")
         # Plot pressure coefficient along airfoil and upper wall
-        if show_plots:
-            plt.figure(3)
-            plt.clf()
-            plt.plot(x, -cp, 'm', marker='o', linewidth=2, markersize=10, label='Airfoil')
-            plt.plot(x, -cpu, 'r', marker='+', linewidth=2, markersize=10, label='Upper wall')
-            plt.plot(potx, -potcp/np.sqrt(1 - minf**2), 'gx', linewidth=2, markersize=10, label='External Data')
-            plt.axis([-0.5, 1.5, -1.4, 1.0])
-            plt.title(f'-Cp as a function of x/c at iteration {it}')
-            plt.xlabel('x/c')
-            plt.ylabel('-Cp')
-            plt.grid(True)
-            plt.legend()
-            plt.pause(0.001)
+        plt.figure(3)
+        plt.clf()
+        plt.plot(x, -cp, 'm', marker='o', linewidth=2, markersize=10, label='Airfoil')
+        plt.plot(x, -cpu, 'r', marker='+', linewidth=2, markersize=10, label='Upper wall')
+        plt.plot(potx, -potcp/np.sqrt(1 - minf**2), 'gx', linewidth=2, markersize=10, label='External Data')
+        plt.axis([-0.5, 1.5, -1.4, 1.0])
+        plt.title(f'-Cp as a function of x/c at iteration {it}')
+        plt.xlabel('x/c')
+        plt.ylabel('-Cp')
+        plt.grid(True)
+        plt.legend()
+        plt.pause(0.001)
         
         # Plot Cp contours if required
         if it < 10 or it % itplot == 0:
@@ -331,40 +295,24 @@ def main(condition=0, show_plots=True):
                         ((phi[j, k] - phi[j-1, k]) / dx[j]) * (dxm2[j] / dxp2[j])
                     )
                 cpg[-1, k] = -2 * ((phi[-1, k] - phi[-2, k]) / (x[-1] - x[-2]))
-            if show_plots:
-                plt.figure(2)
-                plt.clf()
-                cp_levels = 50
-                cp_contours = plt.contour(xmesh, ymesh, cpg, cp_levels)
-                plt.axis([-0.25, 1.25, 0.0, 1.5])
-                plt.title(f'Cp contours at iteration {it}')
-                plt.xlabel('x/c')
-                plt.ylabel('y/c')
-                plt.pause(0.001)
+            plt.figure(2)
+            plt.clf()
+            cp_levels = 50
+            cp_contours = plt.contour(xmesh, ymesh, cpg, cp_levels)
+            plt.axis([-0.25, 1.25, 0.0, 1.5])
+            plt.title(f'Cp contours at iteration {it}')
+            plt.xlabel('x/c')
+            plt.ylabel('y/c')
+            plt.pause(0.001)
     
     # Plot the residual history
-    if show_plots:
-        plt.figure(4)
-        plt.semilogy(range(1, it+1), l2reshist[:it], 'm-', linewidth=2)
-        plt.title('Log of L2-norm as a function of iteration')
-        plt.xlabel('Iteration')
-        plt.ylabel('Log of L2-norm')
-        plt.grid(True)
-        # plt.show()
-        
-        # Save plots
-        plt.figure(3)
-        plt.savefig(f"images/pressure_coefficient-{condition}.png", dpi=300)
-
-        plt.figure(4)
-        plt.savefig(f"images/residual_history-{condition}.png", dpi=300)
-
-
-
+    plt.figure(4)
+    plt.semilogy(range(1, it+1), l2reshist[:it], 'm-', linewidth=2)
+    plt.title('Log of L2-norm as a function of iteration')
+    plt.xlabel('Iteration')
+    plt.ylabel('Log of L2-norm')
+    plt.grid(True)
+    plt.show()
 
 if __name__ == '__main__':
-    # start_time = time.time()
-    main(2, True)
-    # end_time = time.time()
-
-    # print("Elapsed time:", end_time - start_time, "seconds")
+    main()
