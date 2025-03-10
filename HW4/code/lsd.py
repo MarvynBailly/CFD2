@@ -9,17 +9,17 @@ def main(condition=0, show_plots=True):
     # -------------------------------------------------------------------------
     # Parameters (translated from lsd.m)
     # -------------------------------------------------------------------------
-    minf = 0.6 if condition == 1 else 0.80   # Freestream Mach number
     thickness = 0.10                         # Airfoil thickness
 
     # SLOR parameters
-    omega = 1.79
-    itmax = 800
+    omega = 1.97
+    itmax = 1000
     itplot = 200
     
     gamma = 1.4
 
     # Mesh input parameters
+    
     # case from hw3
     if condition == 1:
         j_le = 33     # leading edge index
@@ -29,6 +29,7 @@ def main(condition=0, show_plots=True):
         xsf = 1.18    # x stretching factor
         ysf = 1.18    # y stretching factor
         airfoil_type = 0   # airfoil type - 0 for NACA0010 and 1 for biconvex airfoil
+        minf = 0.0
     else:
         j_le = 33
         j_te = 73
@@ -36,15 +37,25 @@ def main(condition=0, show_plots=True):
         kmax = 43
         xsf = 1.2
         ysf = 1.2
-        airfoil_type = 1   
-        if condition == 4:
-            ysf = 1.0
+        if condition == 2:
+            minf = 0.75
+            airfoil_type = 0
+        elif condition == 3:
+            minf = 0.75
+            airfoil_type = 1
+        elif condition == 4:
+            minf = 0.8
+            airfoil_type = 0
+        elif condition == 5:
+            minf = 0.8
+            airfoil_type = 1   
+
 
     kconst = 3      # number of constant-spaced mesh points
     dxdy = 1.0      # ratio of dx to dy at airfoil surface
 
     # Upper wall boundary?
-    if condition == 4 or condition == 2:
+    if condition == 6:
         iwall = 1
     else:
         iwall = 0
@@ -220,9 +231,6 @@ def main(condition=0, show_plots=True):
                              ((phi[j+1, k] - phi[j, k]) * dxp2[j] - (phi[j, k] - phi[j-1, k]) * dxm2[j])
                              + ((phi[j, k+1] - phi[j, k]) * dyp2[k] - (phi[j, k] - phi[j, k-1]) * dym2[k]))
                 
-                # res[j, k] = (A[j,k]* 
-                            #  ((phi[j+1, k] - phi[j, k]) * dxp2[j] - (phi[j, k] - phi[j-1, k]) * dxm2[j])
-                            #  + ((phi[j, k+1] - phi[j, k]) * dyp2[k] - (phi[j, k] - phi[j, k-1]) * dym2[k]))
                 l2res += res[j, k] ** 2
         l2res = sqrt(l2res / (jmax * kmax))
         if it == 1:
@@ -251,9 +259,9 @@ def main(condition=0, show_plots=True):
             # Interior points k = 1 to kmax-2
             for k in range(1, kmax-1):
                 a[k] = dym2[k]
-                b[k] = -(1  - mu[j,k]) *(dym2[k] + dyp2[k]) - A[j,k] * (dxm2[j] + dxp2[j]) + mu[j,k] * A[j-1,k] * dxp2[j-1]
+                b[k] = -(1  - mu[j,k]) *(dym2[k] + dyp2[k] + A[j,k] * (dxm2[j] + dxp2[j])) + mu[j-1,k] * A[j-1,k] * dxp2[j-1]
                 c[k] = dyp2[k]
-                f_arr[k] = -omega_jk[j,k] * (1  - mu[j,k]) * (res[j, k] + A[j,k] * dphi[j-1, k] * dxm2[j]) + mu[j,k] * omega_jk[j,k] * A[j-1,k] * ((dxp2[j-1] + dxm2[j-1]) * dphi[j-1, k] - dxm2[j-1] * dphi[j-2, k])
+                f_arr[k] = -omega_jk[j,k] * (1  - mu[j,k]) * (res[j, k] + A[j,k] * dphi[j-1, k] * dxm2[j]) + mu[j-1,k] * omega_jk[j,k] * A[j-1,k] * ((dxp2[j-1] + dxm2[j-1]) * dphi[j-1, k] - dxm2[j-1] * dphi[j-2, k])
             # k = kmax-1 (upper boundary)
             a[kmax-1] = 0.0
             b[kmax-1] = 1.0
@@ -296,7 +304,7 @@ def main(condition=0, show_plots=True):
             plt.ylabel('-Cp')
             plt.grid(True)
             plt.legend()
-            plt.pause(0.001)
+            # plt.pause(0.001)
         
         # Plot Cp contours if required
         if it < 10 or it % itplot == 0:
@@ -318,7 +326,7 @@ def main(condition=0, show_plots=True):
                 plt.title(f'Cp contours at iteration {it}')
                 plt.xlabel('x/c')
                 plt.ylabel('y/c')
-                plt.pause(0.001)
+                # plt.pause(0.001)
     
     # Plot the residual history
     if show_plots:
@@ -328,11 +336,21 @@ def main(condition=0, show_plots=True):
         plt.xlabel('Iteration')
         plt.ylabel('Log of L2-norm')
         plt.grid(True)
-        plt.show()
+        # plt.show()
+        
+        # Save plots
+        plt.figure(3)
+        plt.savefig(f"images/pressure_coefficient-{condition}.png", dpi=300)
+
+        plt.figure(4)
+        plt.savefig(f"images/residual_history-{condition}.png", dpi=300)
+
+
+
 
 if __name__ == '__main__':
-    start_time = time.time()
+    # start_time = time.time()
     main(2, True)
-    end_time = time.time()
+    # end_time = time.time()
 
-    print("Elapsed time:", end_time - start_time, "seconds")
+    # print("Elapsed time:", end_time - start_time, "seconds")

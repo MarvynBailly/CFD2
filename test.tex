@@ -1,0 +1,49 @@
+To verify the correctness of the code, we compute a subsonic case to compare with the pre-existing MATLAB code. We compute the flow about a NACA 0010 airfoil (TH = 0.10) for $M_\infty = 0.0$ (incompressible) without wind tunnel wall (iwall = 0) and with a default grid of:
+
+\begin{center}
+\begin{tabular}{@{} l l l l @{}}
+    JLE = 33  & JTE = 63  & JMAX = 95  & KMAX = 33 \\
+    DXDY = 1  & XSF = 1.18  & YSF = 1.18  & KCONST = 3
+\end{tabular}    
+\end{center}
+
+Plotting the pressure distribution along the airfoil surface, we obtain the plot show in Figure. For comparison, the same plot is shown in Figure generated from the MATLAB code. We can see from the plots, that the pressure distribution is the same and the number of iterations required to reduce the $L_2$ norm of the residual by approximately three orders of magnitude is also the same. Furthermore, we can see that the pressure distribution in both cases follows the Prandtl-Glauert correction to data from Abbot and von Doenhoff for linearized compressible flow. This shows that the Python code is working correctly.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.75\textwidth,height=\textwidth,keepaspectratio]{images/pressure_distribution-1.png}
+    \caption{Pressure distribution along the airfoil surface for NACA 0010 airfoil at $M_\infty = 0.0$ using Python code.}
+    \label{fig:pressure_distribution-1}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.75\textwidth,height=\textwidth,keepaspectratio]{images/pressure_distribution-0.png}
+    \caption{Pressure distribution along the airfoil surface for NACA 0010 airfoil at $M_\infty = 0.0$ using MATLAB code.}
+    \label{fig:pressure_distribution-0}
+\end{figure}
+
+
+
+We continue to run the code for a NACA 0010 airfoil and a biconvex airfoil (TH = 0.10) for $M_\infty = 0.75$ and $M_\infty = 0.8$ in air ($\gamma = 1.4$) respectively. These computations are done with a default grid of
+
+\begin{center}
+    \begin{tabular}{@{} l l l l @{}}
+        JLE = 33  & JTE = 73  & JMAX = 105  & KMAX = 43 \\
+        DXDY = 1  & XSF = 1.2  & YSF = 1.2  & KCONST = 3
+    \end{tabular}    
+\end{center}
+
+
+We also preform two additional cases, firstly a NACA 0010 airfoil at $M_\infty = 0.75$ with the wind tunnel one chord above the centerline (with equal spacing in the y-direction) and secondly NACA 0010 airfoil at $M_\infty = 0.80$ using a stretched grid of
+
+\begin{center}
+    \begin{tabular}{@{} l l l l @{}}
+        JLE = 33  & JTE = 73  & JMAX = 105  & KMAX = 43 \\
+        DXDY = 1  & XSF = 1.2  & YSF = 1.2  & KCONST = 3
+    \end{tabular}    
+\end{center}
+
+All of the cases were run until either the number of iterations exceeded 1000 or the $L_2$ norm of the residual was reduced by three orders of magnitude. The number of iterations required, number of supersonic points, and total CPU time are summarized in Table
+
+
