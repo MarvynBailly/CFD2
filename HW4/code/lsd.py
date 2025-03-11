@@ -263,7 +263,7 @@ def main(condition=0, show_plots=True, show_prints=True):
         
         mu = np.where(A >= 0, 0, 1)
         omega_jk = np.ones((jmax, kmax)) * omega
-        omega_jk[A < 0] = 1
+        # omega_jk[A < 0] = 1
         
         
         # --- SLOR update using tridiagonal solver along each interior x-row ---
@@ -316,7 +316,7 @@ def main(condition=0, show_plots=True, show_prints=True):
         supersonic_points[it-1] = supersonic_point
         
         if show_prints:
-            print(f"Number of supersonic points: {supersonic_points}")
+            print(f"Number of supersonic points: {supersonic_point}")
 
         
         # Plot Cp contours if required
@@ -354,7 +354,7 @@ def main(condition=0, show_plots=True, show_prints=True):
         plt.ylabel('-Cp')
         plt.grid(True)
         plt.legend()
-        plt.savefig(f"images/pressure_coefficient-{condition}.png", dpi=300)
+        plt.savefig(f"images/pressure_coefficient-{condition}-no-omega.png", dpi=300)
         # plt.pause(0.001)
     
     # Plot the residual history
@@ -370,51 +370,51 @@ def main(condition=0, show_plots=True, show_prints=True):
 
         plt.grid(True)
         plt.figure(4)
-        plt.savefig(f"images/residual_history-{condition}.png", dpi=300)
+        plt.savefig(f"images/residual_history-{condition}-no-omega.png", dpi=300)
                     
-    # plot supersonic points per iteration
-    if show_plots:
-        plt.figure(6)
-        plt.clf()
-        plt.plot(range(1, it+1), supersonic_points[:it], 'm-', linewidth=2)
-        plt.title('Supersonic points as a function of iteration')
-        plt.xlabel('Iteration')
-        plt.ylabel('Supersonic points')
-        plt.grid(True)
-        plt.savefig(f"images/supersonic_points-{condition}.png", dpi=300)
+    # # plot supersonic points per iteration
+    # if show_plots:
+    #     plt.figure(6)
+    #     plt.clf()
+    #     plt.plot(range(1, it+1), supersonic_points[:it], 'm-', linewidth=2)
+    #     plt.title('Supersonic points as a function of iteration')
+    #     plt.xlabel('Iteration')
+    #     plt.ylabel('Supersonic points')
+    #     plt.grid(True)
+    #     plt.savefig(f"images/supersonic_points-{condition}.png", dpi=300)
     
-    # plot the final Cp contours
-    if show_plots:
-                plt.figure(2)
-                plt.clf()
-                cp_levels = 50
-                cp_contours = plt.contour(xmesh, ymesh, cpg, cp_levels)
-                plt.axis([-0.5, 1.5, 0.0, 2])
-                plt.title(f'Cp contours at iteration {it}')
-                plt.xlabel('x/c')
-                plt.ylabel('y/c')
-                plt.savefig(f"images/cp_contours-{condition}.png", dpi=300)
+    # # plot the final Cp contours
+    # if show_plots:
+    #             plt.figure(2)
+    #             plt.clf()
+    #             cp_levels = 50
+    #             cp_contours = plt.contour(xmesh, ymesh, cpg, cp_levels)
+    #             plt.axis([-0.5, 1.5, 0.0, 2])
+    #             plt.title(f'Cp contours at iteration {it}')
+    #             plt.xlabel('x/c')
+    #             plt.ylabel('y/c')
+    #             plt.savefig(f"images/cp_contours-{condition}.png", dpi=300)
   
-    # Plot streamlines
-    if show_plots:
-            # Compute velocity components from potential phi
-        u = np.zeros((jmax, kmax))
-        v = np.zeros((jmax, kmax))
+    # # Plot streamlines
+    # if show_plots:
+    #         # Compute velocity components from potential phi
+    #     u = np.zeros((jmax, kmax))
+    #     v = np.zeros((jmax, kmax))
 
-        # Compute derivatives using central differences
-        for j in range(1, jmax - 1):
-            for k in range(1, kmax - 1):
-                u[j, k] = (phi[j+1, k] - phi[j-1, k]) / (x[j+1] - x[j-1])
-                v[j, k] = (phi[j, k+1] - phi[j, k-1]) / (y[k+1] - y[k-1])
+    #     # Compute derivatives using central differences
+    #     for j in range(1, jmax - 1):
+    #         for k in range(1, kmax - 1):
+    #             u[j, k] = (phi[j+1, k] - phi[j-1, k]) / (x[j+1] - x[j-1])
+    #             v[j, k] = (phi[j, k+1] - phi[j, k-1]) / (y[k+1] - y[k-1])
                 
-        plt.figure()
-        plt.quiver(xmesh, ymesh, u, v, color='b', scale=10)
-        plt.title('Velocity Vector Field')
-        plt.xlabel('x/c')
-        plt.ylabel('y/c')
-        plt.axis([-0.25, 1.25, 0.0, 1.5])
-        plt.grid(True)
-        plt.savefig(f"images/velocity_vectors-{condition}.png", dpi=300)
+    #     plt.figure()
+    #     plt.quiver(xmesh, ymesh, u, v, color='b', scale=10)
+    #     plt.title('Velocity Vector Field')
+    #     plt.xlabel('x/c')
+    #     plt.ylabel('y/c')
+    #     plt.axis([-0.25, 1.25, 0.0, 1.5])
+    #     plt.grid(True)
+    #     plt.savefig(f"images/velocity_vectors-{condition}.png", dpi=300)
     
     return supersonic_point, minf, airfoil_type, it
 
@@ -438,5 +438,5 @@ def collect_figures():
 
 if __name__ == '__main__':
     # collect_times()
-    collect_figures()    
-    # main(5, False, False)
+    # collect_figures()    
+    main(4, True, True)
