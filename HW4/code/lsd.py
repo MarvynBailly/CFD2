@@ -5,7 +5,9 @@ import time
 
 from tri import solve_tridiagonal
 
-def main(condition=0, show_plots=True):
+colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
+
+def main(condition=0, show_plots=True, show_prints=True):
     # -------------------------------------------------------------------------
     # Parameters (translated from lsd.m)
     # -------------------------------------------------------------------------
@@ -13,7 +15,7 @@ def main(condition=0, show_plots=True):
 
     # SLOR parameters
     omega = 1.97
-    itmax = 500
+    itmax = 1000
     itplot = 200
     
     gamma = 1.4
@@ -30,6 +32,15 @@ def main(condition=0, show_plots=True):
         ysf = 1.18    # y stretching factor
         airfoil_type = 0   # airfoil type - 0 for NACA0010 and 1 for biconvex airfoil
         minf = 0.0
+    elif condition == 7:
+        j_le = 63
+        j_te = 123
+        jmax = 185
+        kmax = 63
+        xsf = 1.1
+        ysf = 1.0
+        airfoil_type = 0   # airfoil type - 0 for NACA0010 and 1 for biconvex airfoil
+        minf = 0.8
     else:
         j_le = 33
         j_te = 73
@@ -38,7 +49,7 @@ def main(condition=0, show_plots=True):
         xsf = 1.2
         ysf = 1.2
         if condition == 2:
-            minf = .8
+            minf = .75
             airfoil_type = 0
         elif condition == 3:
             minf = 0.75
@@ -55,6 +66,7 @@ def main(condition=0, show_plots=True):
             ysf = 1.0
 
 
+    
     kconst = 3      # number of constant-spaced mesh points
     dxdy = 1.0      # ratio of dx to dy at airfoil surface
 
@@ -152,9 +164,9 @@ def main(condition=0, show_plots=True):
     potcp = np.array([1.0, 0.282, -0.061, -0.237, -0.325, -0.341, -0.341, -0.341,
                       -0.329, -0.309, -0.284, -0.237, -0.190, -0.138, -0.094, -0.040,
                       0.04, 0.075, 1.0]) 
-    
-    print("DX1 is", dx1, "DY1 is", dy1)
-    print("XMAX is", x[-1], "YMAX is", y[-1])
+    if show_prints:
+        print("DX1 is", dx1, "DY1 is", dy1)
+        print("XMAX is", x[-1], "YMAX is", y[-1])
     
     # Plot the initial mesh
     fig1 = plt.figure()
@@ -178,7 +190,7 @@ def main(condition=0, show_plots=True):
     
     istop = False
     l2res1 = None
-
+    supersonic_points = np.zeros(itmax) 
     # -------------------------------------------------------------------------
     # SLOR Iterations
     # -------------------------------------------------------------------------
@@ -246,7 +258,8 @@ def main(condition=0, show_plots=True):
         if l2res1 / l2res >= 10000 or l2res1 / l2res <= 1.0 / 1000:
             istop = True
         
-        print(f"Iteration {it} : L2(RES) = {l2res}")
+        if show_prints:
+            print(f"Iteration {it} : L2(RES) = {l2res}")
         
         mu = np.where(A >= 0, 0, 1)
         omega_jk = np.ones((jmax, kmax)) * omega
@@ -298,27 +311,13 @@ def main(condition=0, show_plots=True):
         cpu[-1] = -2 * ((phi[-1, kmax-1] - phi[-2, kmax-1]) / (x[-1] - x[-2]))
         
         # --- Compute number of supersonic points ---
-        supersonic_points = np.sum(A < 0)
+        supersonic_point = np.sum(A < 0)
+        # supersonic_points.append(supersonic_point)
+        supersonic_points[it-1] = supersonic_point
         
-        # mach = np.sqrt((1 - cp) / ((gamma - 1) / 2))
+        if show_prints:
+            print(f"Number of supersonic points: {supersonic_points}")
 
-        # supersonic_points2 = np.sum(mach > 1)
-        
-        print(f"Number of supersonic points: {supersonic_points}")
-        # Plot pressure coefficient along airfoil and upper wall
-        if show_plots:
-            plt.figure(3)
-            plt.clf()
-            plt.plot(x, -cp, 'm', marker='o', linewidth=2, markersize=10, label='Airfoil')
-            plt.plot(x, -cpu, 'r', marker='+', linewidth=2, markersize=10, label='Upper wall')
-            plt.plot(potx, -potcp/np.sqrt(1 - minf**2), 'gx', linewidth=2, markersize=10, label='External Data')
-            plt.axis([-0.5, 1.5, -1.4, 1.0])
-            plt.title(f'-Cp as a function of x/c at iteration {it}')
-            plt.xlabel('x/c')
-            plt.ylabel('-Cp')
-            plt.grid(True)
-            plt.legend()
-            plt.pause(0.001)
         
         # Plot Cp contours if required
         if it < 10 or it % itplot == 0:
@@ -340,31 +339,84 @@ def main(condition=0, show_plots=True):
                 plt.title(f'Cp contours at iteration {it}')
                 plt.xlabel('x/c')
                 plt.ylabel('y/c')
-                plt.pause(0.001)
+                # plt.pause(0.001)
+    
+    # Plot pressure coefficient along airfoil and upper wall
+    if show_plots:
+        plt.figure(3)
+        plt.clf()
+        plt.plot(x, -cp, 'm', marker='o', linewidth=2, markersize=10, label='Airfoil')
+        plt.plot(x, -cpu, 'r', marker='+', linewidth=2, markersize=10, label='Upper wall')
+        plt.plot(potx, -potcp/np.sqrt(1 - minf**2), 'gx', linewidth=2, markersize=10, label='External Data')
+        plt.axis([-0.25, 1.25, -1.4, 1.0])
+        plt.title(f'-Cp as a function of x/c at iteration {it}')
+        plt.xlabel('x/c')
+        plt.ylabel('-Cp')
+        plt.grid(True)
+        plt.legend()
+        # plt.pause(0.001)
     
     # Plot the residual history
     if show_plots:
         plt.figure(4)
-        plt.semilogy(range(1, it+1), l2reshist[:it], 'm-', linewidth=2)
+        # plt.clf()
+        plt.semilogy(range(1, it+1), l2reshist[:it], 'm-', color=colors[condition-1], linewidth=2, label=f'case {condition-1}')
         plt.title('Log of L2-norm as a function of iteration')
         plt.xlabel('Iteration')
         plt.ylabel('Log of L2-norm')
-        plt.grid(True)
-        # plt.show()
+        plt.legend()
         
-        # Save plots
-        plt.figure(3)
-        plt.savefig(f"images/pressure_coefficient-{condition}.png", dpi=300)
 
+        plt.grid(True)
         plt.figure(4)
         plt.savefig(f"images/residual_history-{condition}.png", dpi=300)
+                    
+    # plot supersonic points per iteration
+    if show_plots:
+        plt.figure(6)
+        plt.clf()
+        plt.plot(range(1, it+1), supersonic_points[:it], 'm-', linewidth=2)
+        plt.title('Supersonic points as a function of iteration')
+        plt.xlabel('Iteration')
+        plt.ylabel('Supersonic points')
+        plt.grid(True)
+        plt.savefig(f"images/supersonic_points-{condition}.png", dpi=300)
+    
+    # plot the final Cp contours
+    if show_plots:
+                plt.figure(2)
+                plt.clf()
+                cp_levels = 50
+                cp_contours = plt.contour(xmesh, ymesh, cpg, cp_levels)
+                plt.axis([-0.5, 1.5, 0.0, 2])
+                plt.title(f'Cp contours at iteration {it}')
+                plt.xlabel('x/c')
+                plt.ylabel('y/c')
+                plt.savefig(f"images/cp_contours-{condition}.png", dpi=300)
+  
+    # just need to add a streamline plot
+    
+    return supersonic_point, minf, airfoil_type, it
 
 
+def collect_times():
+    for i in range(2, 8):
+        print("====================================")
+        print(f"Running condition {i}")
+        start_time = time.time()
+        supersonic_points, minf, airfoil_type, final_iteration = main(i, False, False)
+        end_time = time.time()
+        airfoil_name = "NACA0010" if airfoil_type == 0 else "Biconvex"
+        print(f"Airfoil: {airfoil_name} with M_inf = {minf}, and {supersonic_points} supersonic points found in {final_iteration} iterations")
+        print("Elapsed time:", end_time - start_time, "seconds")
+        print("====================================")
 
+def collect_figures():
+    for i in range(2, 3):
+        print(f"Running condition {i}")
+        supersonic_points, minf, airfoil_type, final_iteration = main(i, True, False)
 
 if __name__ == '__main__':
-    # start_time = time.time()
-    main(2, True)
-    # end_time = time.time()
-
-    # print("Elapsed time:", end_time - start_time, "seconds")
+    collect_times()
+    # collect_figures()    
+    # main(5, False, False)
