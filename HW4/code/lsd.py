@@ -354,6 +354,7 @@ def main(condition=0, show_plots=True, show_prints=True):
         plt.ylabel('-Cp')
         plt.grid(True)
         plt.legend()
+        plt.savefig(f"images/pressure_coefficient-{condition}.png", dpi=300)
         # plt.pause(0.001)
     
     # Plot the residual history
@@ -394,7 +395,26 @@ def main(condition=0, show_plots=True, show_prints=True):
                 plt.ylabel('y/c')
                 plt.savefig(f"images/cp_contours-{condition}.png", dpi=300)
   
-    # just need to add a streamline plot
+    # Plot streamlines
+    if show_plots:
+            # Compute velocity components from potential phi
+        u = np.zeros((jmax, kmax))
+        v = np.zeros((jmax, kmax))
+
+        # Compute derivatives using central differences
+        for j in range(1, jmax - 1):
+            for k in range(1, kmax - 1):
+                u[j, k] = (phi[j+1, k] - phi[j-1, k]) / (x[j+1] - x[j-1])
+                v[j, k] = (phi[j, k+1] - phi[j, k-1]) / (y[k+1] - y[k-1])
+                
+        plt.figure()
+        plt.quiver(xmesh, ymesh, u, v, color='b', scale=10)
+        plt.title('Velocity Vector Field')
+        plt.xlabel('x/c')
+        plt.ylabel('y/c')
+        plt.axis([-0.25, 1.25, 0.0, 1.5])
+        plt.grid(True)
+        plt.savefig(f"images/velocity_vectors-{condition}.png", dpi=300)
     
     return supersonic_point, minf, airfoil_type, it
 
@@ -412,11 +432,11 @@ def collect_times():
         print("====================================")
 
 def collect_figures():
-    for i in range(2, 3):
+    for i in range(5, 6):
         print(f"Running condition {i}")
         supersonic_points, minf, airfoil_type, final_iteration = main(i, True, False)
 
 if __name__ == '__main__':
-    collect_times()
-    # collect_figures()    
+    # collect_times()
+    collect_figures()    
     # main(5, False, False)
