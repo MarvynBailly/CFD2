@@ -19,7 +19,7 @@ ds    = 0.004;     % Spacing to first point off the airfoil
 XSF   = 1.02;      % Stretching factor for the normal direction
 XMAX  = 1.5;       % Outer boundary x-location (assumed; adjust as needed)
 tau   = 0.12;      % Thickness parameter for the NACA00xx airfoil
-omega = 0.1;
+omega = 1.5;
 
 % Choose which method to run:
 % 1 -> Algebraic Grid Generation (initial guess)
@@ -27,9 +27,8 @@ omega = 0.1;
 % 3 -> Elliptic grid generation, with control (P and Q computed via a control method)
 method = 2;  % Change this value to 2 or 3 for the other cases
 
-%% INITIAL GRID SETUP (Algebraic grid)
-% Create an initial grid (algebraic mapping, e.g., linear or transfinite interpolation)
-gd = init_algebraic_grid(JMAX, KMAX);
+gd.x = zeros(JMAX, KMAX);
+gd.y = zeros(JMAX, KMAX);
 
 %% APPLY BOUNDARY CONDITIONS
 % Generate and apply the airfoil boundary and outer boundaries based on the problem statement.
@@ -44,6 +43,8 @@ params.tau  = tau;
 params.dxi  = 1 / (JMAX-1);
 params.deta = 1 / (KMAX-1);
 params.omega = omega;
+params.max_iter = 2000;
+params.tol = 1e-6;
 gd = set_boundaries(gd, params);
 [T1, T2] = TFI(flip([gd.x(:,1)';gd.y(:,1)'],2), [gd.x(1,:);gd.y(1,:)], ...
            [gd.x(:,end)';gd.y(:,end)'], [gd.x(end,:);gd.y(end,:)]);
@@ -65,32 +66,7 @@ plot_grid(gd);
 %% FUNCTION DEFINITIONS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function gd = init_algebraic_grid(JMAX, KMAX)
-    % Create an initial grid using a simple algebraic (e.g., linear)
-    % distribution. The interior points can be initialized by linear 
-    % interpolation between boundary curves.
-    %
-    % Output:
-    %   grid - structure with fields:
-    %          grid.x(JMAX, KMAX) and grid.y(JMAX, KMAX)
-    
-    gd.x = zeros(JMAX, KMAX);
-    gd.y = zeros(JMAX, KMAX);
-    
-    % For an algebraic (transfinite) interpolation,
-    % you may initialize the interior as a weighted average of the boundaries.
-    % (Here we leave the interior as zeros; later interpolation could be applied.)
-end
-
 function gd = set_boundaries(gd, params)
-    % Sets the boundary values for the grid. These include:
-    %   - Airfoil surface (j-index along the airfoil contour)
-    %   - Outer boundary (points placed along a circle)
-    %   - Normal direction boundaries based on geometric stretching
-    %
-    % Inputs:
-    %   grid   - grid structure with pre-allocated arrays for x and y.
-    %   params - structure with parameters (JMAX, KMAX, JLE, ds, XSF, XMAX, tau)
     
     JMAX = params.JMAX;
     KMAX = params.KMAX;
@@ -182,60 +158,74 @@ function gd = set_boundaries(gd, params)
 end
 
 function gd = solve_elliptic(gd, params, method)
-    
-    dxdxi = CentralGrad(gd.x, 'horizontal', params.dxi);
-    dxdeta = CentralGrad(gd.x, 'vertical', params.deta);
-    dydxi = CentralGrad(gd.y, 'horizontal', params.dxi);
-    dydeta = CentralGrad(gd.y, 'vertical', params.deta);
-
-    A1 = dxdeta.^2 + dydeta.^2;
-    A2 = dxdeta.*dxdxi + dydeta.*dydxi;
-    A3 = dxdxi.^2 + dydxi.^2;
-
-    % x-component
-    res_x = A1(2:end-1,2:end-1).*CentralD2(gd.x, 'horizontal', params) ...
-            -2*A2(2:end-1,2:end-1).*CentralD2(gd.x, 'mixed', params) ...
-            +A3(2:end-1,2:end-1).*CentralD2(gd.x, 'vertical', params);
+    res_list = [];
     Dx = zeros(size(gd.x));
-
-    for k=2:params.KMAX-1
-        f_x = -res_x(k-1,:) + 2*A2(k,2:end-1).*(Dx(k-1,1:end-2)-Dx(k-1,3:end)) / (4*params.dxi*params.deta) ...
-              -A3(k,2:end-1).*Dx(k-1,2:end-1) / params.deta^2;
-
-        % Update Dirichlet's BC
-        f_x(1) = f_x(1) - A1(k,2) / params.dxi.^2;
-        f_x(end) = f_x(end) - A1(k,end-1) / params.dxi.^2;
-
-        a = A1(k,3:end)/params.dxi.^2;
-        b = -2*A2(k,2:end-1)/params.dxi.^2 - 2*A3(k,2:end-1)/params.deta.^2;
-        c = A1(k,1:end-2)/params.dxi.^2;
-
-        A = spdiags([a', b', c'], [-1, 0, 1], params.JMAX-2, params.JMAX-2);
-        Dx(k,2:end-1) = A\f_x';
-    end
-
-    % y-component
-    res_y = A1(2:end-1,2:end-1).*CentralD2(gd.y, 'horizontal', params) ...
-            -2*A2(2:end-1,2:end-1).*CentralD2(gd.y, 'mixed', params) ...
-            +A3(2:end-1,2:end-1).*CentralD2(gd.y, 'vertical', params);
     Dy = zeros(size(gd.y));
-    for k=2:params.KMAX-1
-        f_y = -res_y(k-1,:) + 2*A2(k,2:end-1).*(Dy(k-1,1:end-2)-Dy(k-1,3:end)) / (4*params.dxi*params.deta) ...
-              -A3(k,2:end-1).*Dy(k-1,2:end-1) / params.deta^2;
-        % Update Dirichlet's BC
-        f_y(1) = f_y(1) - A1(k,2) / params.dxi.^2;
-        f_y(end) = f_y(end) - A1(k,end-1) / params.dxi.^2;
+    for iter=1:params.max_iter
+        dxdxi = CentralGrad(gd.x, 'horizontal', params.dxi);
+        dxdeta = CentralGrad(gd.x, 'vertical', params.deta);
+        dydxi = CentralGrad(gd.y, 'horizontal', params.dxi);
+        dydeta = CentralGrad(gd.y, 'vertical', params.deta);
+    
+        A1 = dxdeta.^2 + dydeta.^2;
+        A2 = dxdeta.*dxdxi + dydeta.*dydxi;
+        A3 = dxdxi.^2 + dydxi.^2;
+    
+        % x-component
+        res_x = A1(2:end-1,2:end-1).*CentralD2(gd.x, 'horizontal', params) ...
+                -2*A2(2:end-1,2:end-1).*CentralD2(gd.x, 'mixed', params) ...
+                +A3(2:end-1,2:end-1).*CentralD2(gd.x, 'vertical', params);
+    
+        for k=2:params.KMAX-1
+            f_x = -res_x(k-1,:) + 2*A2(k,2:end-1).*(Dx(k-1,1:end-2)-Dx(k-1,3:end)) / (4*params.dxi*params.deta) ...
+                  -A3(k,2:end-1).*Dx(k-1,2:end-1) / params.deta^2;
+    
+            % Update Dirichlet's BC
+            %f_x(1) = f_x(1) - A1(k,2) / params.dxi.^2;
+            %f_x(end) = f_x(end) - A1(k,end-1) / params.dxi.^2;
+    
+            a = A1(k,3:end)/params.dxi.^2;
+            b = -2*A1(k,2:end-1)/params.dxi.^2 - 2*A3(k,2:end-1)/params.deta.^2;
+            c = A1(k,1:end-2)/params.dxi.^2;
+    
+            A = spdiags([a', b', c'], [-1, 0, 1], params.JMAX-2, params.JMAX-2);
+            Dx(k,2:end-1) = (A\f_x')';
+        end
+    
+        % y-component
+        res_y = A1(2:end-1,2:end-1).*CentralD2(gd.y, 'horizontal', params) ...
+                -2*A2(2:end-1,2:end-1).*CentralD2(gd.y, 'mixed', params) ...
+                +A3(2:end-1,2:end-1).*CentralD2(gd.y, 'vertical', params);
+        for k=2:params.KMAX-1
+            f_y = -res_y(k-1,:) + 2*A2(k,2:end-1).*(Dy(k-1,1:end-2)-Dy(k-1,3:end)) / (4*params.dxi*params.deta) ...
+                  -A3(k,2:end-1).*Dy(k-1,2:end-1) / params.deta^2;
+            % Update Dirichlet's BC
+            %f_y(1) = f_y(1) - A1(k,2) / params.dxi.^2;
+            %f_y(end) = f_y(end) - A1(k,end-1) / params.dxi.^2;
+    
+            a = A1(k,3:end)/params.dxi.^2;
+            b = -2*A1(k,2:end-1)/params.dxi.^2 - 2*A3(k,2:end-1)/params.deta.^2;
+            c = A1(k,1:end-2)/params.dxi.^2;
+    
+            A = spdiags([a', b', c'], [-1, 0, 1], params.JMAX-2, params.JMAX-2);
+            Dy(k,2:end-1) = A\f_y';
+        end
+    
+        gd.x = gd.x + params.omega*Dx;
+        gd.y = gd.y + params.omega*Dy;
+        res = norm([res_x, res_y], 'fro');
+        res_list = [res_list, res];
 
-        a = A1(k,3:end)/params.dxi.^2;
-        b = -2*A2(k,2:end-1)/params.dxi.^2 - 2*A3(k,2:end-1)/params.deta.^2;
-        c = A1(k,1:end-2)/params.dxi.^2;
-
-        A = spdiags([a', b', c'], [-1, 0, 1], params.JMAX-2, params.JMAX-2);
-        Dy(k,2:end-1) = A\f_y';
+        
     end
+    plot(gd.x, gd.y, 'b.-'); hold on;
+    plot(gd.x', gd.y', 'b.-');
+    title('Full Grid');
+    xlabel('x'); ylabel('y');
+    axis equal; grid on;
 
-    gd.x = gd.x + params.omega*Dx;
-    gd.y = gd.y + params.omega*Dy;
+    figure();
+    semilogy(res_list); grid on
 end
 
 
