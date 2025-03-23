@@ -30,12 +30,12 @@ function d2 = CentralD2(f, direction, params)
         case 'horizontal'
             % Compute horizontal second derivative:
             % Operate on the interior rows (2:end-1) and compute along columns
-            d2 = ( f(2:end-1, 3:end) - 2 * f(2:end-1, 2:end-1) + f(2:end-1, 1:end-2) ) / params.dxi^2;
+            d2 = ( f(:, 3:end) - 2 * f(:, 2:end-1) + f(:, 1:end-2) ) / params.dxi^2;
             
         case 'vertical'
             % Compute vertical second derivative:
             % Operate on the interior columns (2:end-1) and compute along rows
-            d2 = ( f(3:end, 2:end-1) - 2 * f(2:end-1, 2:end-1) + f(1:end-2, 2:end-1) ) / params.deta^2;
+            d2 = ( f(3:end, :) - 2 * f(2:end-1, :) + f(1:end-2, :) ) / params.deta^2;
 
         case 'mixed'
             % Compute mixed second derivative:

@@ -25,7 +25,7 @@ omega = 1.5;
 % 1 -> Algebraic Grid Generation (initial guess)
 % 2 -> Elliptic grid generation, no control (P = Q = 0)
 % 3 -> Elliptic grid generation, with control (P and Q computed via a control method)
-method = 2;  % Change this value to 2 or 3 for the other cases
+method = 3;  % Change this value to 2 or 3 for the other cases
 
 gd.x = zeros(JMAX, KMAX);
 gd.y = zeros(JMAX, KMAX);
@@ -166,15 +166,47 @@ function gd = solve_elliptic(gd, params, method)
         dxdeta = CentralGrad(gd.x, 'vertical', params.deta);
         dydxi = CentralGrad(gd.y, 'horizontal', params.dxi);
         dydeta = CentralGrad(gd.y, 'vertical', params.deta);
-    
+        dydeta2 = CentralD2(gd.y, 'vertical', params);
+        dxdeta2 = CentralD2(gd.x, 'vertical', params);
+        dydxi2 = CentralD2(gd.y, 'horizontal', params);
+        dxdxi2 = CentralD2(gd.x, 'horizontal', params);
+
         A1 = dxdeta.^2 + dydeta.^2;
         A2 = dxdeta.*dxdxi + dydeta.*dydxi;
         A3 = dxdxi.^2 + dydxi.^2;
+
+        if method == 3
+            % Construct psi function
+            flag0 = dydeta(:,1) >= dxdeta(:,1);
+            flag0 = flag0(2:end-1);
+            psi = zeros(params.KMAX-2, params.JMAX);
+            psi(flag0,1) = -dydeta2(flag0,1) ./ dydeta([false;flag0;false],1);
+            psi(~flag0,1) = -dxdeta2(~flag0,1) ./ dxdeta([false;~flag0;false],1);
+            flag1 = dydeta(:,end) >= dxdeta(:,end);
+            flag1 = flag1(2:end-1);
+            psi(flag1,end) = -dydeta2(flag1,end) ./ dydeta([false;flag1;false],end);
+            psi(~flag1,end) = -dxdeta2(~flag1,end) ./ dxdeta([false;~flag1;false],end);
+            psi = (1:-params.dxi:0).*psi(:,1) + (0:params.dxi:1).*psi(:,end);
+            psi = psi(:,2:end-1);
+
+            % Construct phi function
+            flag0 = dydxi(1,:) >= dxdxi(1,:);
+            flag0 = flag0(2:end-1);
+            phi = zeros(params.KMAX, params.JMAX-2);
+            phi(1,flag0) = -dydxi2(1,flag0) ./ dydxi(1,[false,flag0,false]);
+            phi(1,~flag0) = -dxdxi2(1,~flag0) ./ dxdxi(1,[false,~flag0,false]);
+            flag1 = dydxi(end,:) >= dxdxi(end,:);
+            flag1 = flag1(2:end-1);
+            phi(end,flag1) = -dydxi2(end,flag1) ./ dydxi(end,[false,flag1,false]);
+            phi(end,~flag1) = -dxdxi2(end,~flag1) ./ dxdxi(end,[false,~flag1,false]);
+            phi = (1:-params.deta:0)'.*phi(1,:) + (0:params.deta:1)'.*phi(end,:);
+            phi = phi(2:end-1,:);
+        end
     
         % x-component
-        res_x = A1(2:end-1,2:end-1).*CentralD2(gd.x, 'horizontal', params) ...
+        res_x = A1(2:end-1,2:end-1).*dxdxi2(2:end-1,:) ...
                 -2*A2(2:end-1,2:end-1).*CentralD2(gd.x, 'mixed', params) ...
-                +A3(2:end-1,2:end-1).*CentralD2(gd.x, 'vertical', params);
+                +A3(2:end-1,2:end-1).*dxdeta2(:,2:end-1); 
     
         for k=2:params.KMAX-1
             f_x = -res_x(k-1,:) + 2*A2(k,2:end-1).*(Dx(k-1,1:end-2)-Dx(k-1,3:end)) / (4*params.dxi*params.deta) ...
@@ -193,9 +225,9 @@ function gd = solve_elliptic(gd, params, method)
         end
     
         % y-component
-        res_y = A1(2:end-1,2:end-1).*CentralD2(gd.y, 'horizontal', params) ...
+        res_y = A1(2:end-1,2:end-1).*dydxi2(2:end-1,:) ...
                 -2*A2(2:end-1,2:end-1).*CentralD2(gd.y, 'mixed', params) ...
-                +A3(2:end-1,2:end-1).*CentralD2(gd.y, 'vertical', params);
+                +A3(2:end-1,2:end-1).*dydeta2(:,2:end-1);
         for k=2:params.KMAX-1
             f_y = -res_y(k-1,:) + 2*A2(k,2:end-1).*(Dy(k-1,1:end-2)-Dy(k-1,3:end)) / (4*params.dxi*params.deta) ...
                   -A3(k,2:end-1).*Dy(k-1,2:end-1) / params.deta^2;
