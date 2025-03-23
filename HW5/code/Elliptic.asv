@@ -25,7 +25,7 @@ omega = 1.5;
 % 1 -> Algebraic Grid Generation (initial guess)
 % 2 -> Elliptic grid generation, no control (P = Q = 0)
 % 3 -> Elliptic grid generation, with control (P and Q computed via a control method)
-method = 3;  % Change this value to 2 or 3 for the other cases
+method = 2;  % Change this value to 2 or 3 for the other cases
 
 gd.x = zeros(JMAX, KMAX);
 gd.y = zeros(JMAX, KMAX);
@@ -56,11 +56,11 @@ gd.y = T2;
 if method >= 2
     % Initialize convergence criteria, relaxation factors, etc.
     % NOTE: The solver routine is left empty. Insert your iterative scheme here.
-    gd = solve_elliptic(gd, params, method);
+    [gd, res_list] = solve_elliptic(gd, params, method);
 end
 
 %% PLOT THE GRID
-plot_grid(gd);
+plot_grid(gd, res_list, params);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% FUNCTION DEFINITIONS
@@ -157,7 +157,7 @@ function gd = set_boundaries(gd, params)
     end
 end
 
-function gd = solve_elliptic(gd, params, method)
+function [gd, res_list] = solve_elliptic(gd, params, method)
     res_list = [];
     Dx = zeros(size(gd.x));
     Dy = zeros(size(gd.y));
@@ -177,12 +177,12 @@ function gd = solve_elliptic(gd, params, method)
 
         if method == 3
             % Construct psi function
-            flag0 = dydeta(:,1) >= dxdeta(:,1);
+            flag0 = abs(dydeta(:,1)) >= abs(dxdeta(:,1));
             flag0 = flag0(2:end-1);
             psi = zeros(params.KMAX-2, params.JMAX);
             psi(flag0,1) = -dydeta2(flag0,1) ./ dydeta([false;flag0;false],1);
             psi(~flag0,1) = -dxdeta2(~flag0,1) ./ dxdeta([false;~flag0;false],1);
-            flag1 = dydeta(:,end) >= dxdeta(:,end);
+            flag1 = abs(dydeta(:,end)) >= abs(dxdeta(:,end));
             flag1 = flag1(2:end-1);
             psi(flag1,end) = -dydeta2(flag1,end) ./ dydeta([false;flag1;false],end);
             psi(~flag1,end) = -dxdeta2(~flag1,end) ./ dxdeta([false;~flag1;false],end);
@@ -190,23 +190,26 @@ function gd = solve_elliptic(gd, params, method)
             psi = psi(:,2:end-1);
 
             % Construct phi function
-            flag0 = dydxi(1,:) >= dxdxi(1,:);
+            flag0 = abs(dydxi(1,:)) >= abs(dxdxi(1,:));
             flag0 = flag0(2:end-1);
             phi = zeros(params.KMAX, params.JMAX-2);
             phi(1,flag0) = -dydxi2(1,flag0) ./ dydxi(1,[false,flag0,false]);
             phi(1,~flag0) = -dxdxi2(1,~flag0) ./ dxdxi(1,[false,~flag0,false]);
-            flag1 = dydxi(end,:) >= dxdxi(end,:);
+            flag1 = abs(dydxi(end,:)) >= abs(dxdxi(end,:));
             flag1 = flag1(2:end-1);
             phi(end,flag1) = -dydxi2(end,flag1) ./ dydxi(end,[false,flag1,false]);
             phi(end,~flag1) = -dxdxi2(end,~flag1) ./ dxdxi(end,[false,~flag1,false]);
-            phi = (1:-params.deta:0).*phi(:,1) + (0:params.deta:1).*phi(:,end);
+            phi = (1:-params.deta:0)'.*phi(1,:) + (0:params.deta:1)'.*phi(end,:);
             phi = phi(2:end-1,:);
+        else
+            phi = 0;
+            psi = 0;
         end
     
         % x-component
-        res_x = A1(2:end-1,2:end-1).*dxdxi2(2:end-1,:) ...
+        res_x = A1(2:end-1,2:end-1).*(dxdxi2(2:end-1,:) + phi.*dxdxi(2:end-1,2:end-1)) ...
                 -2*A2(2:end-1,2:end-1).*CentralD2(gd.x, 'mixed', params) ...
-                +A3(2:end-1,2:end-1).*dxdeta2(:,2:end-1); 
+                +A3(2:end-1,2:end-1).*(dxdeta2(:,2:end-1) + psi.*dxdeta(2:end-1,2:end-1)); 
     
         for k=2:params.KMAX-1
             f_x = -res_x(k-1,:) + 2*A2(k,2:end-1).*(Dx(k-1,1:end-2)-Dx(k-1,3:end)) / (4*params.dxi*params.deta) ...
@@ -225,9 +228,9 @@ function gd = solve_elliptic(gd, params, method)
         end
     
         % y-component
-        res_y = A1(2:end-1,2:end-1).*dydxi2(2:end-1,:) ...
+        res_y = A1(2:end-1,2:end-1).*(dydxi2(2:end-1,:) + phi.*dydxi(2:end-1,2:end-1)) ...
                 -2*A2(2:end-1,2:end-1).*CentralD2(gd.y, 'mixed', params) ...
-                +A3(2:end-1,2:end-1).*dydeta2(:,2:end-1);
+                +A3(2:end-1,2:end-1).*(dydeta2(:,2:end-1) + psi.*dydeta(2:end-1,2:end-1));
         for k=2:params.KMAX-1
             f_y = -res_y(k-1,:) + 2*A2(k,2:end-1).*(Dy(k-1,1:end-2)-Dy(k-1,3:end)) / (4*params.dxi*params.deta) ...
                   -A3(k,2:end-1).*Dy(k-1,2:end-1) / params.deta^2;
@@ -250,18 +253,18 @@ function gd = solve_elliptic(gd, params, method)
 
         
     end
-    plot(gd.x, gd.y, 'b.-'); hold on;
-    plot(gd.x', gd.y', 'b.-');
-    title('Full Grid');
-    xlabel('x'); ylabel('y');
-    axis equal; grid on;
+    % plot(gd.x, gd.y, 'b.-'); hold on;
+    % plot(gd.x', gd.y', 'b.-');
+    % title('Full Grid');
+    % xlabel('x'); ylabel('y');
+    % axis equal; grid on;
 
-    figure();
-    semilogy(res_list); grid on
+    % figure();
+    % semilogy(res_list); grid on
 end
 
 
-function plot_grid(gd)
+function plot_grid(gd, res_list, params)
     % Plot the grid in three different views:
     %   1. Full grid including outer boundaries.
     %   2. Zoomed view around the airfoil.
@@ -280,21 +283,57 @@ function plot_grid(gd)
     xlabel('x'); ylabel('y');
     axis equal; grid on;
     
-    % Zoom around the airfoil (near j-index corresponding to the airfoil boundary)
+    % Zoomed-in view around the airfoil
     figure;
-    % Choose indices near the airfoil surface
-    airfoil_j = round(JMAX/2);
-    plot(gd.x(airfoil_j,:), gd.y(airfoil_j,:), 'r.-');
-    title('Zoomed View Around the Airfoil');
+    plot(gd.x, gd.y, 'b.-'); hold on;
+    plot(gd.x', gd.y', 'b.-');
+    title('Zoomed-In View: Airfoil Region');
     xlabel('x'); ylabel('y');
     axis equal; grid on;
     
-    % Zoom around the trailing-edge (assume trailing edge is near j = JLE)
+    % Set zoom limits manually
+    xlim([-0.1, 1.1]);       
+    ylim([-0.15, 0.15]);  
+
+    % Zoomed-in view around the airfoil
     figure;
-    plot(gd.x(params.JLE-5:params.JLE+5, :), gd.y(params.JLE-5:params.JLE+5, :), 'k.-');
-    title('Zoomed View Around the Trailing Edge');
+    plot(gd.x, gd.y, 'b.-'); hold on;
+    plot(gd.x', gd.y', 'b.-');
+    title('Zoomed-In View: Airfoil Region');
     xlabel('x'); ylabel('y');
     axis equal; grid on;
+    
+    % Set zoom limits manually or based on gd.x/y values
+    xlim([-0.1, 1.1]);       
+    ylim([-0.15, 0.15]);
+
+    figure();
+    semilogy(res_list); grid on;
+    title("Convergence of Residual");
+    xlabel('Iteration'); ylabel("L2 norm of residual");
+    
+    % % Zoom around the airfoil (several layers close to the surface)
+    % figure;
+    % hold on;
+    % 
+    % num_layers = 5;           % Number of layers off the airfoil
+    % for j = 1:num_layers
+    %     plot(gd.x(j,:), gd.y(j,:), 'b.-');
+    % end
+    % for k = 1:KMAX
+    %     plot(gd.x(1:num_layers,k), gd.y(1:num_layers,k), 'b.-');
+    % end
+    % 
+    % title(['Zoomed View of First ', num2str(num_layers), ' Layers Near the Airfoil']);
+    % xlabel('x'); ylabel('y');
+    % axis equal; grid on;
+    % 
+    % % Zoom around the trailing-edge (assume trailing edge is near j = JLE)
+    % figure;
+    % plot(gd.x(params.JLE-5:params.JLE+5, :), gd.y(params.JLE-5:params.JLE+5, :), 'k.-');
+    % title('Zoomed View Around the Trailing Edge');
+    % xlabel('x'); ylabel('y');
+    % axis equal; grid on;
 end
 
 function [T1, T2] = TFI(bottom, right, top, left)

@@ -25,7 +25,7 @@ omega = 1.5;
 % 1 -> Algebraic Grid Generation (initial guess)
 % 2 -> Elliptic grid generation, no control (P = Q = 0)
 % 3 -> Elliptic grid generation, with control (P and Q computed via a control method)
-method = 3;  % Change this value to 2 or 3 for the other cases
+method = 1;  % Change this value to 2 or 3 for the other cases
 
 gd.x = zeros(JMAX, KMAX);
 gd.y = zeros(JMAX, KMAX);
@@ -43,7 +43,7 @@ params.tau  = tau;
 params.dxi  = 1 / (JMAX-1);
 params.deta = 1 / (KMAX-1);
 params.omega = omega;
-params.max_iter = 2000;
+params.max_iter = 10000;
 params.tol = 1e-6;
 gd = set_boundaries(gd, params);
 [T1, T2] = TFI(flip([gd.x(:,1)';gd.y(:,1)'],2), [gd.x(1,:);gd.y(1,:)], ...
@@ -56,11 +56,15 @@ gd.y = T2;
 if method >= 2
     % Initialize convergence criteria, relaxation factors, etc.
     % NOTE: The solver routine is left empty. Insert your iterative scheme here.
-    gd = solve_elliptic(gd, params, method);
+    [gd, res_list] = solve_elliptic(gd, params, method);
+end
+
+if method == 1
+    res_list = []
 end
 
 %% PLOT THE GRID
-plot_grid(gd);
+plot_grid(gd, res_list, method);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% FUNCTION DEFINITIONS
@@ -157,7 +161,7 @@ function gd = set_boundaries(gd, params)
     end
 end
 
-function gd = solve_elliptic(gd, params, method)
+function [gd, res_list] = solve_elliptic(gd, params, method)
     res_list = [];
     Dx = zeros(size(gd.x));
     Dy = zeros(size(gd.y));
@@ -246,25 +250,35 @@ function gd = solve_elliptic(gd, params, method)
             Dy(k,2:end-1) = A\f_y';
         end
     
-        gd.x = gd.x + params.omega*Dx;
-        gd.y = gd.y + params.omega*Dy;
         res = norm([res_x, res_y], 'fro');
         res_list = [res_list, res];
-
         
-    end
-    plot(gd.x, gd.y, 'b.-'); hold on;
-    plot(gd.x', gd.y', 'b.-');
-    title('Full Grid');
-    xlabel('x'); ylabel('y');
-    axis equal; grid on;
+        % Store initial residual on first iteration
+        if iter == 1
+            initial_res = res;
+        end
 
-    figure();
-    semilogy(res_list); grid on
+        if res / initial_res < 1e-5  
+            fprintf('Converged at iteration %d: residual dropped from %.2e to %.2e\n', ...
+                iter, initial_res, res);
+            break;
+        end
+
+        gd.x = gd.x + params.omega*Dx;
+        gd.y = gd.y + params.omega*Dy;        
+    end
+    % plot(gd.x, gd.y, 'b.-'); hold on;
+    % plot(gd.x', gd.y', 'b.-');
+    % title('Full Grid');
+    % xlabel('x'); ylabel('y');
+    % axis equal; grid on;
+
+    % figure();
+    % semilogy(res_list); grid on
 end
 
 
-function plot_grid(gd)
+function plot_grid(gd, res_list, method)
     % Plot the grid in three different views:
     %   1. Full grid including outer boundaries.
     %   2. Zoomed view around the airfoil.
@@ -272,7 +286,15 @@ function plot_grid(gd)
     %
     % Input:
     %   grid - structure with grid.x and grid.y coordinates.
-    
+    switch method
+        case 1
+            method_name = 'TFI';
+        case 2
+            method_name = 'elliptic_no_control';
+        case 3
+            method_name = 'elliptic_control';
+    end
+
     [JMAX, KMAX] = size(gd.x);
     
     % Full gd plot
@@ -282,22 +304,61 @@ function plot_grid(gd)
     title('Full Grid');
     xlabel('x'); ylabel('y');
     axis equal; grid on;
+    print('-depsc', fullfile('images', [method_name '_full_grid.eps']));
     
-    % Zoom around the airfoil (near j-index corresponding to the airfoil boundary)
+    % Zoomed-in view around the airfoil
     figure;
-    % Choose indices near the airfoil surface
-    airfoil_j = round(JMAX/2);
-    plot(gd.x(airfoil_j,:), gd.y(airfoil_j,:), 'r.-');
-    title('Zoomed View Around the Airfoil');
+    plot(gd.x, gd.y, 'b.-', 'LineWidth', 0.25); hold on;
+    plot(gd.x', gd.y', 'b.-', 'LineWidth', 0.25);
+    title('Zoomed-In View: Airfoil Region');
     xlabel('x'); ylabel('y');
     axis equal; grid on;
-    
-    % Zoom around the trailing-edge (assume trailing edge is near j = JLE)
+    % Set zoom limits manually
+    xlim([-0.1, 1.1]);       
+    ylim([-0.15, 0.15]);  
+    print('-depsc', fullfile('images', [method_name '_airfoil_zoom.eps']));
+
+    % Zoomed-in view around the trailing edge
     figure;
-    plot(gd.x(params.JLE-5:params.JLE+5, :), gd.y(params.JLE-5:params.JLE+5, :), 'k.-');
-    title('Zoomed View Around the Trailing Edge');
+    plot(gd.x, gd.y, 'b.-'); hold on;
+    plot(gd.x', gd.y', 'b.-');
+    title('Zoomed-In View: Trailing-Edge');
     xlabel('x'); ylabel('y');
     axis equal; grid on;
+    % Set zoom limits manually 
+    xlim([0.97, 1.03]);  
+    ylim([-0.03, 0.03]); 
+    print('-depsc', fullfile('images', [method_name '_trailing_edge_zoom.eps']));
+    
+    % convergence plot
+    figure();
+    semilogy(res_list); grid on;
+    title("Convergence of Residual");
+    xlabel('Iteration'); ylabel("L2 norm of residual");
+    print('-depsc', fullfile('images', [method_name '_convergence.eps']));
+    
+    % % Zoom around the airfoil (several layers close to the surface)
+    % figure;
+    % hold on;
+    % 
+    % num_layers = 5;           % Number of layers off the airfoil
+    % for j = 1:num_layers
+    %     plot(gd.x(j,:), gd.y(j,:), 'b.-');
+    % end
+    % for k = 1:KMAX
+    %     plot(gd.x(1:num_layers,k), gd.y(1:num_layers,k), 'b.-');
+    % end
+    % 
+    % title(['Zoomed View of First ', num2str(num_layers), ' Layers Near the Airfoil']);
+    % xlabel('x'); ylabel('y');
+    % axis equal; grid on;
+    % 
+    % % Zoom around the trailing-edge (assume trailing edge is near j = JLE)
+    % figure;
+    % plot(gd.x(params.JLE-5:params.JLE+5, :), gd.y(params.JLE-5:params.JLE+5, :), 'k.-');
+    % title('Zoomed View Around the Trailing Edge');
+    % xlabel('x'); ylabel('y');
+    % axis equal; grid on;
 end
 
 function [T1, T2] = TFI(bottom, right, top, left)
