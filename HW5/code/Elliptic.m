@@ -177,12 +177,12 @@ function gd = solve_elliptic(gd, params, method)
 
         if method == 3
             % Construct psi function
-            flag0 = dydeta(:,1) >= dxdeta(:,1);
+            flag0 = abs(dydeta(:,1)) >= abs(dxdeta(:,1));
             flag0 = flag0(2:end-1);
             psi = zeros(params.KMAX-2, params.JMAX);
             psi(flag0,1) = -dydeta2(flag0,1) ./ dydeta([false;flag0;false],1);
             psi(~flag0,1) = -dxdeta2(~flag0,1) ./ dxdeta([false;~flag0;false],1);
-            flag1 = dydeta(:,end) >= dxdeta(:,end);
+            flag1 = abs(dydeta(:,end)) >= abs(dxdeta(:,end));
             flag1 = flag1(2:end-1);
             psi(flag1,end) = -dydeta2(flag1,end) ./ dydeta([false;flag1;false],end);
             psi(~flag1,end) = -dxdeta2(~flag1,end) ./ dxdeta([false;~flag1;false],end);
@@ -190,23 +190,26 @@ function gd = solve_elliptic(gd, params, method)
             psi = psi(:,2:end-1);
 
             % Construct phi function
-            flag0 = dydxi(1,:) >= dxdxi(1,:);
+            flag0 = abs(dydxi(1,:)) >= abs(dxdxi(1,:));
             flag0 = flag0(2:end-1);
             phi = zeros(params.KMAX, params.JMAX-2);
             phi(1,flag0) = -dydxi2(1,flag0) ./ dydxi(1,[false,flag0,false]);
             phi(1,~flag0) = -dxdxi2(1,~flag0) ./ dxdxi(1,[false,~flag0,false]);
-            flag1 = dydxi(end,:) >= dxdxi(end,:);
+            flag1 = abs(dydxi(end,:)) >= abs(dxdxi(end,:));
             flag1 = flag1(2:end-1);
             phi(end,flag1) = -dydxi2(end,flag1) ./ dydxi(end,[false,flag1,false]);
             phi(end,~flag1) = -dxdxi2(end,~flag1) ./ dxdxi(end,[false,~flag1,false]);
             phi = (1:-params.deta:0)'.*phi(1,:) + (0:params.deta:1)'.*phi(end,:);
             phi = phi(2:end-1,:);
+        else
+            phi = 0;
+            psi = 0;
         end
     
         % x-component
-        res_x = A1(2:end-1,2:end-1).*dxdxi2(2:end-1,:) ...
+        res_x = A1(2:end-1,2:end-1).*(dxdxi2(2:end-1,:) + phi.*dxdxi(2:end-1,2:end-1)) ...
                 -2*A2(2:end-1,2:end-1).*CentralD2(gd.x, 'mixed', params) ...
-                +A3(2:end-1,2:end-1).*dxdeta2(:,2:end-1); 
+                +A3(2:end-1,2:end-1).*(dxdeta2(:,2:end-1) + psi.*dxdeta(2:end-1,2:end-1)); 
     
         for k=2:params.KMAX-1
             f_x = -res_x(k-1,:) + 2*A2(k,2:end-1).*(Dx(k-1,1:end-2)-Dx(k-1,3:end)) / (4*params.dxi*params.deta) ...
@@ -225,9 +228,9 @@ function gd = solve_elliptic(gd, params, method)
         end
     
         % y-component
-        res_y = A1(2:end-1,2:end-1).*dydxi2(2:end-1,:) ...
+        res_y = A1(2:end-1,2:end-1).*(dydxi2(2:end-1,:) + phi.*dydxi(2:end-1,2:end-1)) ...
                 -2*A2(2:end-1,2:end-1).*CentralD2(gd.y, 'mixed', params) ...
-                +A3(2:end-1,2:end-1).*dydeta2(:,2:end-1);
+                +A3(2:end-1,2:end-1).*(dydeta2(:,2:end-1) + psi.*dydeta(2:end-1,2:end-1));
         for k=2:params.KMAX-1
             f_y = -res_y(k-1,:) + 2*A2(k,2:end-1).*(Dy(k-1,1:end-2)-Dy(k-1,3:end)) / (4*params.dxi*params.deta) ...
                   -A3(k,2:end-1).*Dy(k-1,2:end-1) / params.deta^2;
