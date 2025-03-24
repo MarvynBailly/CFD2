@@ -20,12 +20,13 @@ XSF   = 1.02;      % Stretching factor for the normal direction
 XMAX  = 1.5;       % Outer boundary x-location (assumed; adjust as needed)
 tau   = 0.12;      % Thickness parameter for the NACA00xx airfoil
 omega = 1.5;
+save_plots = 0;
 
 % Choose which method to run:
 % 1 -> Algebraic Grid Generation (initial guess)
 % 2 -> Elliptic grid generation, no control (P = Q = 0)
 % 3 -> Elliptic grid generation, with control (P and Q computed via a control method)
-method = 1;  % Change this value to 2 or 3 for the other cases
+method = 2;  % Change this value to 2 or 3 for the other cases
 
 gd.x = zeros(JMAX, KMAX);
 gd.y = zeros(JMAX, KMAX);
@@ -64,7 +65,7 @@ if method == 1
 end
 
 %% PLOT THE GRID
-plot_grid(gd, res_list, method);
+plot_grid(gd, res_list, method, save_plots);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% FUNCTION DEFINITIONS
@@ -99,8 +100,10 @@ function gd = set_boundaries(gd, params)
         % Compute the corresponding y values using the analytical expression
         % for a NACA00xx airfoil.
         % f(x) = 5*tau*(0.2969*sqrt(x) - 0.1260*x - 0.3516*x^2 + 0.2843*x^3 - 0.1015*x^4)
-        f = 5*tau*(0.2969*sqrt(gd.x(j,1)) - 0.1260*gd.x(j,1) ...
-                  - 0.3516*gd.x(j,1)^2 + 0.2843*gd.x(j,1)^3 - 0.1015*gd.x(j,1)^4);
+        x_int = 1.008930411365;
+        f = 5*tau*(0.2969*sqrt(gd.x(j,1)*x_int) - 0.1260*gd.x(j,1)*x_int ...
+                  - 0.3516*(gd.x(j,1)*x_int)^2 + 0.2843*(gd.x(j,1)*x_int)^3 ...
+                  - 0.1015*(gd.x(j,1)*x_int)^4);
         % For the upper surface use +f, for the lower surface use -f.
         if j <= JLE
             gd.y(j,1) = f;
@@ -278,7 +281,7 @@ function [gd, res_list] = solve_elliptic(gd, params, method)
 end
 
 
-function plot_grid(gd, res_list, method)
+function plot_grid(gd, res_list, method, save_plots)
     % Plot the grid in three different views:
     %   1. Full grid including outer boundaries.
     %   2. Zoomed view around the airfoil.
@@ -304,7 +307,7 @@ function plot_grid(gd, res_list, method)
     title('Full Grid');
     xlabel('x'); ylabel('y');
     axis equal; grid on;
-    print('-depsc', fullfile('images', [method_name '_full_grid.eps']));
+    if save_plots == 1 print('-depsc', fullfile('images', [method_name '_full_grid.eps'])); end
     
     % Zoomed-in view around the airfoil
     figure;
@@ -316,7 +319,7 @@ function plot_grid(gd, res_list, method)
     % Set zoom limits manually
     xlim([-0.1, 1.1]);       
     ylim([-0.15, 0.15]);  
-    print('-depsc', fullfile('images', [method_name '_airfoil_zoom.eps']));
+    if save_plots == 1 print('-depsc', fullfile('images', [method_name '_airfoil_zoom.eps'])); end
 
     % Zoomed-in view around the trailing edge
     figure;
@@ -328,14 +331,14 @@ function plot_grid(gd, res_list, method)
     % Set zoom limits manually 
     xlim([0.97, 1.03]);  
     ylim([-0.03, 0.03]); 
-    print('-depsc', fullfile('images', [method_name '_trailing_edge_zoom.eps']));
+    if save_plots == 1 print('-depsc', fullfile('images', [method_name '_trailing_edge_zoom.eps'])); end
     
     % convergence plot
     figure();
     semilogy(res_list); grid on;
     title("Convergence of Residual");
     xlabel('Iteration'); ylabel("L2 norm of residual");
-    print('-depsc', fullfile('images', [method_name '_convergence.eps']));
+    if save_plots == 1 print('-depsc', fullfile('images', [method_name '_convergence.eps'])); end
     
     % % Zoom around the airfoil (several layers close to the surface)
     % figure;
