@@ -1,0 +1,15 @@
+To derive equations \ref{eq2} from Possion's equation \ref{eq1}, we use that
+\begin{align}
+    \xi_x &= J y_\eta, \quad \xi_y = - J x_\eta,\\
+    \eta_x &= - J y_\xi, \quad \eta_y = J x_\xi,
+\end{align}
+where $J = (x_\xi y_\eta - y_\xi x_\eta)^{-1}.$ Noting that from the chain rule $\pp{}{x} = \xi_x \pp{}{\xi} + \eta_x \pp{}{\eta}$, we can compute
+\begin{align}
+    \xi_{xx} = \pp{}{x}(J y_\eta) &= (J y_\eta) \pp{}{\xi}(J y_\eta) + (-J y_\xi) \pp{}{\eta}(J y_\eta) \notag \\
+    &= J y_\eta \pp{J}{\xi} y_\eta + J^2 y_\eta \pp{y_\eta}{\xi} - J y_\xi \pp{J}{\eta}y_\eta - J^2 y_\xi \pp{y_\eta}{\eta} \notag \\
+\end{align}
+Similarly we find that
+\begin{equation}
+    \xi_{yy} = J x_\eta \pp{J}{\xi} + J^2 x_\eta \pp{x_\eta}{\xi} - J x_\eta \pp{J}{\eta}x_\eta - J^2 x_\eta \pp{x_\eta}{\eta}.
+\end{equation}
+Now noting that 

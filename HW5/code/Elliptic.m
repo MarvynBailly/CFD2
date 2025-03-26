@@ -16,17 +16,18 @@ JMAX  = 217;       % Number of points in wrap-around (airfoil contour) direction
 KMAX  = 71;        % Number of points in the normal direction
 JLE   = 109;       % Index corresponding to the leading edge
 ds    = 0.004;     % Spacing to first point off the airfoil
-XSF   = 1.02;      % Stretching factor for the normal direction
-XMAX  = 1.5;       % Outer boundary x-location (assumed; adjust as needed)
+XSF   = 1.12;      % Stretching factor for the normal direction
+XMAX  = 2;       % Outer boundary x-location (assumed; adjust as needed)
 tau   = 0.12;      % Thickness parameter for the NACA00xx airfoil
 omega = 1.5;
 save_plots = 0;
+x_int = 1; % 1.008930411365; 
 
 % Choose which method to run:
 % 1 -> Algebraic Grid Generation (initial guess)
 % 2 -> Elliptic grid generation, no control (P = Q = 0)
 % 3 -> Elliptic grid generation, with control (P and Q computed via a control method)
-method = 2;  % Change this value to 2 or 3 for the other cases
+method = 3;  % Change this value to 2 or 3 for the other cases
 
 gd.x = zeros(JMAX, KMAX);
 gd.y = zeros(JMAX, KMAX);
@@ -41,6 +42,7 @@ params.ds   = ds;
 params.XSF  = XSF;
 params.XMAX = XMAX;
 params.tau  = tau;
+params.x_int = x_int;
 params.dxi  = 1 / (JMAX-1);
 params.deta = 1 / (KMAX-1);
 params.omega = omega;
@@ -100,7 +102,7 @@ function gd = set_boundaries(gd, params)
         % Compute the corresponding y values using the analytical expression
         % for a NACA00xx airfoil.
         % f(x) = 5*tau*(0.2969*sqrt(x) - 0.1260*x - 0.3516*x^2 + 0.2843*x^3 - 0.1015*x^4)
-        x_int = 1.008930411365;
+        x_int = params.x_int;
         f = 5*tau*(0.2969*sqrt(gd.x(j,1)*x_int) - 0.1260*gd.x(j,1)*x_int ...
                   - 0.3516*(gd.x(j,1)*x_int)^2 + 0.2843*(gd.x(j,1)*x_int)^3 ...
                   - 0.1015*(gd.x(j,1)*x_int)^4);
@@ -302,8 +304,8 @@ function plot_grid(gd, res_list, method, save_plots)
     
     % Full gd plot
     figure;
-    plot(gd.x, gd.y, 'b.-'); hold on;
-    plot(gd.x', gd.y', 'b.-');
+    plot(gd.x, gd.y, 'b'); hold on;
+    plot(gd.x', gd.y', 'b');
     title('Full Grid');
     xlabel('x'); ylabel('y');
     axis equal; grid on;
@@ -311,20 +313,20 @@ function plot_grid(gd, res_list, method, save_plots)
     
     % Zoomed-in view around the airfoil
     figure;
-    plot(gd.x, gd.y, 'b.-', 'LineWidth', 0.25); hold on;
-    plot(gd.x', gd.y', 'b.-', 'LineWidth', 0.25);
+    plot(gd.x, gd.y, 'b', 'LineWidth', 0.25); hold on;
+    plot(gd.x', gd.y', 'b', 'LineWidth', 0.25);
     title('Zoomed-In View: Airfoil Region');
     xlabel('x'); ylabel('y');
     axis equal; grid on;
     % Set zoom limits manually
-    xlim([-0.1, 1.1]);       
-    ylim([-0.15, 0.15]);  
+    xlim([-1.5, 2.5]);       
+    ylim([-2, 2]);  
     if save_plots == 1 print('-depsc', fullfile('images', [method_name '_airfoil_zoom.eps'])); end
 
     % Zoomed-in view around the trailing edge
     figure;
-    plot(gd.x, gd.y, 'b.-'); hold on;
-    plot(gd.x', gd.y', 'b.-');
+    plot(gd.x, gd.y, 'b'); hold on;
+    plot(gd.x', gd.y', 'b');
     title('Zoomed-In View: Trailing-Edge');
     xlabel('x'); ylabel('y');
     axis equal; grid on;
@@ -373,8 +375,23 @@ function [T1, T2] = TFI(bottom, right, top, left)
     lt = left(:,end);
     lb = left(:,1);
     
-    s1 = linspace(0,1,Nx1);
-    s2 = linspace(0,1,Nx2);
+    % s1 = linspace(0,1,Nx1);
+    % s2 = linspace(0,1,Nx2);
+    
+    dx1 = diff(bottom(1,:));
+    dy1 = diff(bottom(2,:));
+    ds1 = sqrt(dx1.^2 + dy1.^2);
+    s1 = [0, cumsum(ds1)];
+    s1 = s1 / s1(end);
+
+    dx2 = diff(left(1,:));
+    dy2 = diff(left(2,:));
+    ds2 = sqrt(dx2.^2 + dy2.^2);
+    s2 = [0, cumsum(ds2)];
+    s2 = s2 / s2(end);
+
+
+
     [S1, S2] = meshgrid(s1, s2);
     
     T1 = (1-S2).*bottom(1,:) + S2.*top(1,:) + (1-S1).*right(1,:)' + S1.*left(1,:)' ...
