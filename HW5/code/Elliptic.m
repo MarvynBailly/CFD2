@@ -32,6 +32,10 @@ method = 3;  % Change this value to 2 or 3 for the other cases
 gd.x = zeros(JMAX, KMAX);
 gd.y = zeros(JMAX, KMAX);
 
+if method > 3
+    x_int = 1.008930411365;
+end
+
 %% APPLY BOUNDARY CONDITIONS
 % Generate and apply the airfoil boundary and outer boundaries based on the problem statement.
 % This routine fills in the boundary values for x and y using the given formulas.
@@ -184,7 +188,7 @@ function [gd, res_list] = solve_elliptic(gd, params, method)
         A2 = dxdeta.*dxdxi + dydeta.*dydxi;
         A3 = dxdxi.^2 + dydxi.^2;
 
-        if method == 3
+        if method == 3 || method == 4
             % Construct psi function
             flag0 = abs(dydeta(:,1)) >= abs(dxdeta(:,1));
             flag0 = flag0(2:end-1);
@@ -298,6 +302,8 @@ function plot_grid(gd, res_list, method, save_plots)
             method_name = 'elliptic_no_control';
         case 3
             method_name = 'elliptic_control';
+        case 4
+            method_name = 'elliptic_control_xint';
     end
 
     [JMAX, KMAX] = size(gd.x);
