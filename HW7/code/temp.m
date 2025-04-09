@@ -11,6 +11,11 @@ rho0 = 0.5;  % density at the entrance
 p0 = 0.379;   % pressure at the entrance 
 gamma = 1.4;    % ratio of specific heats
 
+
+cfl = 0.9; 
+max_iter = 2000;
+residual_history = zeros(max_iter, 1);
+
 jmaxes = [61];
 
 for jmax = jmaxes
@@ -27,7 +32,6 @@ for jmax = jmaxes
     march_type = 1;
     % use space marching
     [rho_sp,u_sp,p_sp,e_sp,amach_sp] = spacemarch(gamma,fsmach,p0,rho0,xsh,x,area,march_type);
-
 
     %%%%%% Explicit Time Marching %%%%%%
     % use Steger-Warming method
