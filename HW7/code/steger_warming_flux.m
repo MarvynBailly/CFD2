@@ -6,15 +6,15 @@ function [Fhp, Fhm] = steger_warming_flux(Qh, A, gamma)
 %   Q = [rho, u, p]
 % return fluxes in conservative form by multiplying by A
 
-    N = size(Q, 2);
+    N = size(Qh, 2);
     Fp = zeros(3, N);
     Fm = zeros(3, N);
 
     for j = 1:N
         % convert back to primitive variables
-        rho = Q(1, j) / A(j);
-        rhou = Q(2, j) / A(j);        
-        e = Q(3, j) / A(j);
+        rho = Qh(1, j) / A(j);
+        rhou = Qh(2, j) / A(j);        
+        e = Qh(3, j) / A(j);
         
         u = rhou / rho;
         u2 = u^2;
