@@ -21,11 +21,16 @@ for jmax = jmaxes
   % no shock
   if method == 1
     %%%%%% generate initial conditions %%%%%%
-    % place shock at 4
-    xsh = 4;
+    % no shock
+    xsh = -1;
     % use predictor-corrector method 
     march_type = 1;
     % use space marching
     [rho_sp,u_sp,p_sp,e_sp,amach_sp] = spacemarch(gamma,fsmach,p0,rho0,xsh,x,area,march_type);
+
+
+    %%%%%% Explicit Time Marching %%%%%%
+    % use Steger-Warming method
+
   end
 end
