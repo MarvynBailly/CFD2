@@ -95,7 +95,7 @@ end
 function Q = convert_to_primitive(Q, Qh, gamma, area)
   % convert to primitive variables
   Q(1, :) = Qh(1, :) ./ area;
-  Q(2, :) = Qh(1, :) ./ Qh(2, :);
+  Q(2, :) = Qh(2, :) ./ Qh(1, :);
   Q(3, :) = (gamma - 1) .* (Qh(3,:) ./ area - 0.5 .* Q(1,:) .* Q(2,:).^2);
 end
 
