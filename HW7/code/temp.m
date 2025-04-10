@@ -58,17 +58,32 @@ for jmax = jmaxes
     % FIX BOUNDARY CONDITIONS
     % compute residuals 
     res = compute_residual(Qh, Q, Fhp, Fhm, area, dx, dt);
-  
-    % fix to inlet?
-    Qh(:,1) = [rho_sp(1); rho_sp(1)*u_sp(1); e_sp(1)] * area(1);
-    
+
     % extrap for now
     Qh(:,jmax) = Qh(:,jmax-1);
 
     % update conservative variables
     Qh = Qh + res;
   end
+
+  % plot things
+  Q = convert_to_primitive(Q, Qh, gamma, area);
+
+  figure(1)
+  plot(x, Q(1,:), 'r-', 'LineWidth', 2)
+  title('Density')
+
+  figure(2)
+  plot(x, Q(2,:), 'r-', 'LineWidth', 2)
+  title('Velocity')
+
+  figure(3)
+  plot(x, Q(3,:), 'r-', 'LineWidth', 2)
+  title('Pressure')
 end
+
+
+
 
 function Qh = convert_to_conservative(Qh, rho, u, e, area)
   % convert to conservative variables
@@ -80,7 +95,7 @@ end
 function Q = convert_to_primitive(Q, Qh, gamma, area)
   % convert to primitive variables
   Q(1, :) = Qh(1, :) ./ area;
-  Q(2, :) = Qh(2, :) ./ Qh(2, :);
+  Q(2, :) = Qh(1, :) ./ Qh(2, :);
   Q(3, :) = (gamma - 1) .* (Qh(3,:) ./ area - 0.5 .* Q(1,:) .* Q(2,:).^2);
 end
 
@@ -101,17 +116,3 @@ function residual = compute_residual(Qh, Q, Fhp, Fhm, area, dx, dt)
 end
 
 
-
-% plot results
-% recover primitive variables
-rho = Qh(1, :) ./ area;
-rhou = Qh(2, :) ./ area;        
-e = Qh(3, :) ./ area;
-
-u = rhou ./ rho;
-u2 = u.^2;
-p = (gamma - 1) .* (e - 0.5 * rho .* u2);
-
-% plot pressure
-figure(2)
-plot(x, p, 'r-', 'LineWidth', 2)
