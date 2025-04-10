@@ -42,7 +42,7 @@ for jmax = jmaxes
 
   %%%%%% Explicit Time Marching %%%%%%
   % use Steger-Warming method to compute fluxes
-  for t = 1:100
+  for t = 1:max_iter
     % compute primitive variables
     Q = convert_to_primitive(Q, Qh, gamma, area);
 
