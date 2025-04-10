@@ -24,14 +24,14 @@ function [Fhp, Fhm] = steger_warming_flux(Q, A, gamma)
     lambda3p = 0.5 * (lambda3 + abs(lambda3)); lambda3m = 0.5 * (lambda3 - abs(lambda3));
 
     % compute fluxes directly from provided formula
-    coef = 1 / (2 * gamma);
-    Fp(1, :) = coef * (2*(gamma - 1) * lambda1p + lambda2p + lambda3p);
-    Fp(2, :) = coef * (2*(gamma - 1) *u .* lambda1p + lambda2 .* lambda2p + lambda3 .* lambda3p);
-    Fp(3, :) = coef * (2*(gamma - 1) * u2 .* lambda1p + (H + u.*c) .* lambda2p + (H - u.*c) .* lambda3p);
+    coef = rho / (2 * gamma);
+    Fp(1, :) = coef .* (2*(gamma - 1) * lambda1p + lambda2p + lambda3p);
+    Fp(2, :) = coef .* (2*(gamma - 1) *u .* lambda1p + lambda2 .* lambda2p + lambda3 .* lambda3p);
+    Fp(3, :) = coef .* (2*(gamma - 1) * u2 .* lambda1p + (H + u.*c) .* lambda2p + (H - u.*c) .* lambda3p);
     
-    Fm(1, :) = coef * (2*(gamma - 1) * lambda1p + lambda2p + lambda3p);
-    Fm(2, :) = coef * (2*(gamma - 1) * u .* lambda1p + lambda2 .* lambda2p + lambda3 .* lambda3p);
-    Fm(3, :) = coef * (2*(gamma - 1) * u2 .* lambda1p + (H + u.*c) .* lambda2p + (H - u.*c) .* lambda3p);
+    Fm(1, :) = coef .* (2*(gamma - 1) * lambda1p + lambda2p + lambda3p);
+    Fm(2, :) = coef .* (2*(gamma - 1) * u .* lambda1p + lambda2 .* lambda2p + lambda3 .* lambda3p);
+    Fm(3, :) = coef .* (2*(gamma - 1) * u2 .* lambda1p + (H + u.*c) .* lambda2p + (H - u.*c) .* lambda3p);
 
     % convert back to conservative form
     Fhp = Fp .* A;

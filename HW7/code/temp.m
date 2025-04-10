@@ -42,11 +42,11 @@ for jmax = jmaxes
 
   %%%%%% Explicit Time Marching %%%%%%
   % use Steger-Warming method to compute fluxes
-  for t = 1:10
+  for t = 1:100
     % compute primitive variables
     Q = convert_to_primitive(Q, Qh, gamma, area);
 
-    % compute speed of sound and enthalpy
+    % compute speed of sound
     c = sqrt(gamma .* Q(3,:) ./ Q(1,:));
 
     % compute local timesteps
@@ -96,7 +96,7 @@ function residual = compute_residual(Qh, Q, Fhp, Fhm, area, dx, dt)
   residual = zeros(3, N);
   for j = 2:size(Qh, 2)-1
     residual(:, j) = -dt / dx * (Fhp(:, j) - Fhp(:, j-1) + Fhm(:, j+1) - Fhm(:, j));
-    residual(2, j) = residual(2,j)  + dt / dx * (Q(3,j) * (0.5*(area(j+1)-area(j)) - 0.5*(area(j)-area(j-1))));
+    residual(2, j) = residual(2,j)  + dt / dx * (Q(3,j) * abs((0.5*(area(j+1)-area(j)) - 0.5*(area(j)-area(j-1)))));
   end  
 end
 
