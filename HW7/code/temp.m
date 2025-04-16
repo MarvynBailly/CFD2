@@ -30,7 +30,7 @@ for jmax = jmaxes
   if method == 1
     %%%%%% generate initial conditions %%%%%%
     % no shock
-    xsh = -1;
+    xsh = 4;
     % use predictor-corrector method 
     march_type = 1;
     % use space marching
@@ -46,7 +46,7 @@ for jmax = jmaxes
   
   %%%%%% Explicit Time Marching %%%%%%
   % use Steger-Warming method to compute fluxes
-  for i = 1:1
+  for i = 1:500
     % compute primitive variables
     Q = convert_to_primitive(Qh, gamma, area);
 
@@ -64,7 +64,7 @@ for jmax = jmaxes
 
     % extrap for now
     % Qh(:,jmax) = Qh(:,jmax-1)
-    res = boundary_condition(Q, c, dt, dx, area, gamma, res, p_end)
+    res = boundary_condition(Q, c, dt, dx, area, gamma, res, p_end);
 
 
     % update conservative variables
