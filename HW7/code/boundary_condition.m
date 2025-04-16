@@ -4,6 +4,7 @@ function res = boundary_condition(Q, c, dt, dx, area, gamma, res, p_end);
     u_jmax = Q(2, end);
 
     R1 = - u_jmax * (dt/dx) * ((Q(1, end) - Q(1, end-1)) - (1/c(end)^2) *(Q(3, end) - Q(3, end-1)));
+    %    - (1/c(end)^2) * (gamma * Q(3, end) * Q(1, end) / area(end)) * - (Q(1, end) * Q(2, end) / area(end));
 
     R2 = - (dt/dx) * ((u_jmax + c(end)) * (Q(3, end) - Q(3, end-1) + (Q(2,end) * c(end)) * (Q(2, end) - Q(2, end-1)))...
      - Q(1,end) * Q(2,end) * c(end)^2 / area(end) * (area(end) - area(end-1)));

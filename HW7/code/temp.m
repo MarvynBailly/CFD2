@@ -36,7 +36,8 @@ for jmax = jmaxes
     % use space marching
     [rho_sp,u_sp,p_sp,e_sp,amach_sp] = spacemarch(gamma,fsmach,p0,rho0,xsh,x,area,march_type);
   end
-  
+
+
   rho_end = rho_sp(end);
   u_end = u_sp(end);
   p_end = p_sp(end);  
@@ -58,19 +59,17 @@ for jmax = jmaxes
     % compute fluxes
     [Fhp, Fhm] = steger_warming_flux(Q, area, gamma);
 
-    % FIX BOUNDARY CONDITIONS
     % compute residuals 
     res = compute_residual(Qh, Q, Fhp, Fhm, area, dx, dt, x);
 
     % extrap for now
-    % Qh(:,jmax) = Qh(:,jmax-1);
-    % res = boundary_condition(Q, c, dt, dx, area, gamma, res, p_end);
+    % Qh(:,jmax) = Qh(:,jmax-1)
+    res = boundary_condition(Q, c, dt, dx, area, gamma, res, p_end);
+
 
     % update conservative variables
     Qh = Qh + res;
-    
-
-
+    Qh
     t = t + dt;
     res_list = [res_list, norm(res, 'fro')];
 
@@ -142,8 +141,8 @@ function residual = compute_residual(Qh, Q, Fhp, Fhm, area, dx, dt, x)
   residual = zeros(3, N);
   for j = 2:size(Qh, 2)-1
     residual(:, j) = -dt / dx * (Fhp(:, j) - Fhp(:, j-1) + Fhm(:, j+1) - Fhm(:, j));
-    residual(2, j) = residual(2,j)  + dt / dx * (Q(3,j) * abs((0.5*(area(j+1)+area(j)) - 0.5*(area(j)+area(j-1)))));
-    %residual(2, j) = residual(2,j)  + dt / dx * (Q(3,j) * abs(calcarea(0.5*(x(j+1)+x(j))) - calcarea(0.5*(x(j)+x(j-1)))));
+    % residual(2, j) = residual(2,j)  + dt / dx * (Q(3,j) * abs((0.5*(area(j+1)+area(j)) - 0.5*(area(j)+area(j-1)))));
+    residual(2, j) = residual(2,j)  + dt / dx * (Q(3,j) * (calcarea(j*dx + 0.5 *dx) - calcarea(j*dx + 0.5 *dx)));
   end  
 end
 
