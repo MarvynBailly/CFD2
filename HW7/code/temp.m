@@ -36,18 +36,18 @@ for jmax = jmaxes
     % use space marching
     [rho_sp,u_sp,p_sp,e_sp,amach_sp] = spacemarch(gamma,fsmach,p0,rho0,xsh,x,area,march_type);
   end
-
-  % form conservative variables
-  Qh = zeros(3, jmax);
-  Q = zeros(3, jmax);
-
-  Qh = convert_to_conservative(Qh, rho0*rho_sp./rho_sp, u_sp(1)*u_sp./u_sp, e_sp(1)*e_sp./e_sp, area);
-
+  
+  rho_end = rho_sp(end);
+  u_end = u_sp(end);
+  p_end = p_sp(end);  
+  % Qh = convert_to_conservative(Qh, rho0*rho_sp./rho_sp, u_sp(1)*u_sp./u_sp, e_sp(1)*e_sp./e_sp, area);
+  Qh = convert_to_conservative(rho_sp, u_sp, e_sp, area);
+  
   %%%%%% Explicit Time Marching %%%%%%
   % use Steger-Warming method to compute fluxes
   for i = 1:max_iter
     % compute primitive variables
-    Q = convert_to_primitive(Q, Qh, gamma, area);
+    Q = convert_to_primitive(Qh, gamma, area);
 
     % compute speed of sound
     c = sqrt(gamma .* Q(3,:) ./ Q(1,:));
@@ -63,10 +63,14 @@ for jmax = jmaxes
     res = compute_residual(Qh, Q, Fhp, Fhm, area, dx, dt, x);
 
     % extrap for now
-    Qh(:,jmax) = Qh(:,jmax-1);
+    % Qh(:,jmax) = Qh(:,jmax-1);
+    res = boundary_condition(Qh, Q, c, dt, dx, area, gamma, res, rho_end, u_end, p_end);
 
     % update conservative variables
     Qh = Qh + res;
+    
+
+
     t = t + dt;
     res_list = [res_list, norm(res, 'fro')];
 
@@ -79,7 +83,7 @@ for jmax = jmaxes
   end
 
   % plot things
-  Q = convert_to_primitive(Q, Qh, gamma, area);
+  Q = convert_to_primitive(Qh, gamma, area);
 
   figure(1)
   plot(x, Q(1,:), 'r-', 'LineWidth', 2); hold on
@@ -108,14 +112,18 @@ end
 
 
 
-function Qh = convert_to_conservative(Qh, rho, u, e, area)
+function Qh = convert_to_conservative(rho, u, e, area)
+  N = size(rho, 2);
+  Qh = zeros(3, N);
   % convert to conservative variables
   Qh(1, :) = rho .* area;
   Qh(2, :) = rho .* u .* area;
   Qh(3, :) = e .* area;
 end
 
-function Q = convert_to_primitive(Q, Qh, gamma, area)
+function Q = convert_to_primitive(Qh, gamma, area)
+  N = size(Qh, 2);
+  Q = zeros(3, N);
   % convert to primitive variables
   Q(1, :) = Qh(1, :) ./ area;
   Q(2, :) = Qh(2, :) ./ Qh(1, :);
