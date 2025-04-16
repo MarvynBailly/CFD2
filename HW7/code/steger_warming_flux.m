@@ -1,39 +1,39 @@
 function [Fhp, Fhm] = steger_warming_flux(Q, A, gamma)
-% Steger-Warming flux vector splitting
-% return fluxes in conservative form by multiplying by A
-
     N = size(Q, 2);
-    Fp = zeros(3, N);
-    Fm = zeros(3, N);
+    Fhp = zeros(3, N);
+    Fhm = zeros(3, N);
 
     rho = Q(1, :);
-    u = Q(2, :);
-    p = Q(3, :);
+    u   = Q(2, :);
+    p   = Q(3, :);
 
-    e = (p / (gamma - 1)) + 0.5 * rho .* u.^2;
-    u2 = u.^2;
-    c = sqrt(gamma * p ./ rho);
-    H = (e + p) ./ rho;
+    a = sqrt(gamma * p ./ rho);
+    H = (p / (gamma - 1) + 0.5 * rho .* u.^2 + p) ./ rho;  % total enthalpy
 
-    lambda1 = u;
-    lambda2 = u + c;
-    lambda3 = u - c;
+    % Split eigenvalues
+    lambda1p = 0.5 * (u     + abs(u));
+    lambda2p = 0.5 * (u + a + abs(u + a));
+    lambda3p = 0.5 * (u - a + abs(u - a));
 
-    lambda1p = 0.5 * (lambda1 + abs(lambda1)); lambda1m = 0.5 * (lambda1 - abs(lambda1));
-    lambda2p = 0.5 * (lambda2 + abs(lambda2)); lambda2m = 0.5 * (lambda2 - abs(lambda2));
-    lambda3p = 0.5 * (lambda3 + abs(lambda3)); lambda3m = 0.5 * (lambda3 - abs(lambda3));
+    lambda1m = 0.5 * (u     - abs(u));
+    lambda2m = 0.5 * (u + a - abs(u + a));
+    lambda3m = 0.5 * (u - a - abs(u - a));
 
-    % compute fluxes directly from provided formula
-    coef = rho / (2 * gamma);
-    Fp(1, :) = coef .* (2*(gamma - 1) * lambda1p + lambda2p + lambda3p);
-    Fp(2, :) = coef .* (2*(gamma - 1) * u .* lambda1p + lambda2 .* lambda2p + lambda3 .* lambda3p);
-    Fp(3, :) = coef .* ((gamma - 1) * u2 .* lambda1p + (H + u.*c) .* lambda2p + (H - u.*c) .* lambda3p);
-    
-    Fm(1, :) = coef .* (2*(gamma - 1) * lambda1m + lambda2m + lambda3m);
-    Fm(2, :) = coef .* (2*(gamma - 1) * u .* lambda1m + lambda2 .* lambda2m + lambda3 .* lambda3m);
-    Fm(3, :) = coef .* ((gamma - 1) * u2 .* lambda1m + (H + u.*c) .* lambda2m + (H - u.*c) .* lambda3m);
+    for j = 1:N
+        % Positive flux
+        Fhp(:,j) = 0.5 * (1/gamma) * A(j) * rho(j) * [ ...
+            2 * (gamma - 1) * lambda1p(j) + lambda2p(j) + lambda3p(j); ...
+            2 * (gamma - 1) * u(j) * lambda1p(j) + (u(j) + a(j)) * lambda2p(j) + (u(j) - a(j)) * lambda3p(j); ...
+            (gamma - 1) * u(j)^2 * lambda1p(j) + ...
+            (H(j) + u(j)*a(j)) * lambda2p(j) + (H(j) - u(j)*a(j)) * lambda3p(j)];
 
-    % convert back to conservative form
-    Fhp = Fp .* A;
-    Fhm = Fm .* A;
+        % Negative flux
+        Fmp(:,j) = 0.5 * (1/gamma) * A(j) *  rho(j) * [ ...
+            2 * (gamma - 1) * lambda1m(j) + lambda2m(j) + lambda3m(j); ...
+            2 * (gamma - 1) * u(j) * lambda1m(j) + (u(j) + a(j)) * lambda2m(j) + (u(j) - a(j)) * lambda3m(j); ...
+            (gamma - 1) * u(j)^2 * lambda1m(j) + ...
+            (H(j) + u(j)*a(j)) * lambda2m(j) + (H(j) - u(j)*a(j)) * lambda3m(j)];
+    end
+
+    % Optional: multiply by area outside this function (in residual)
 end
