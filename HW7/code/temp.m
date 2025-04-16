@@ -22,6 +22,9 @@ for jmax = jmaxes
   dx = 10./(jmax-1);
   x = 0:dx:10;
   area = calcarea(x);
+  t = 0;
+  res_list = [];
+  % error = []; Need exact solution?
 
   % no shock
   if method == 1
@@ -42,7 +45,7 @@ for jmax = jmaxes
 
   %%%%%% Explicit Time Marching %%%%%%
   % use Steger-Warming method to compute fluxes
-  for t = 1:max_iter
+  for i = 1:max_iter
     % compute primitive variables
     Q = convert_to_primitive(Q, Qh, gamma, area);
 
@@ -64,6 +67,14 @@ for jmax = jmaxes
 
     % update conservative variables
     Qh = Qh + res;
+    t = t + dt;
+    res_list = [res_list, norm(res, 'fro')];
+
+    %figure(2)
+    %plot(x, Q(2,:), 'r-', 'LineWidth', 2)
+    %title(['Velocity, t=',num2str(t)])
+
+    %pause(0.1)
   end
 
   % plot things
@@ -72,14 +83,21 @@ for jmax = jmaxes
   figure(1)
   plot(x, Q(1,:), 'r-', 'LineWidth', 2)
   title('Density')
+  grid on
 
   figure(2)
   plot(x, Q(2,:), 'r-', 'LineWidth', 2)
   title('Velocity')
+  grid on
 
   figure(3)
   plot(x, Q(3,:), 'r-', 'LineWidth', 2)
   title('Pressure')
+  grid on
+
+  figure(4)
+  plot(res_list, 'r-', 'LineWidth', 2)
+  grid on
 end
 
 
