@@ -64,7 +64,7 @@ for jmax = jmaxes
 
     % extrap for now
     % Qh(:,jmax) = Qh(:,jmax-1);
-    res = boundary_condition(Qh, Q, c, dt, dx, area, gamma, res, rho_end, u_end, p_end);
+    % res = boundary_condition(Q, c, dt, dx, area, gamma, res, p_end);
 
     % update conservative variables
     Qh = Qh + res;
@@ -75,11 +75,11 @@ for jmax = jmaxes
     res_list = [res_list, norm(res, 'fro')];
 
     figure(2)
-    plot(x, Q(2,:), 'r-', 'LineWidth', 2); hold on
-    plot(x, u_sp); hold off
-    title(['Velocity, t=',num2str(t)])
+    plot(x, Q(3,:), 'r-', 'LineWidth', 2); hold on
+    plot(x, p_sp); hold off
+    title(['Pressure, t=',num2str(t)])
 
-    pause(0.1)
+    % pause(0.1)
   end
 
   % plot things
