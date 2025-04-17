@@ -17,13 +17,16 @@ cfl = 0.9;
 max_iter = 2000;
 residual_history = zeros(max_iter, 1);
 
-amplitude = 0.3; % for graph 4.X
+amplitude = 0.01; % for graph 4.X
 iteration_chop = 1500:50:2000; % for graph 4.1 and 4.4
+plot_p_vs_t = 1; % for graph 4.2 and 4.3
+p_history = [];
+t_history = [];
 
 unsteady = 0;
 converged = 0;
 
-jmaxes = [200];
+jmaxes = [121];
 
 for jmax = jmaxes
   dx = 10./(jmax-1);
@@ -127,6 +130,11 @@ for jmax = jmaxes
         grid on
     end
 
+    if plot_p_vs_t % for graph 4.2 and 4.3
+        p_history = [p_history, Q(3,x==4.5)];
+        t_history = [t_history, t-dt];
+    end
+
   end
 
   % plot things
@@ -162,6 +170,14 @@ for jmax = jmaxes
   legend(num2str(iteration_chop'), Location="best")
   xlabel('x')
   ylabel('p')
+
+  if plot_p_vs_t % for graph 4.2 and 4.3
+     figure(7)
+     plot(t_history, p_history, 'r-', 'LineWidth', 2)
+     xlabel('t')
+     ylabel('p')
+     grid on
+  end
 end
 
 
