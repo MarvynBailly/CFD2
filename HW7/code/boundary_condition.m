@@ -24,10 +24,8 @@ function res = boundary_condition(Q, c, dt, dx, area, gamma, res, p_end)
     %  - Q(1,end) * Q(2,end) * c(end)^2 / area(end) * (area(end) - area(end-1)));
 
     if (u_jmaxm1 >= c(end-1))
-        disp('supersonic')
         dp = 0.5 * (R2 + R3);
     else
-        disp('subsonic')
         % change this to sin once converged ?
         dp = p_end - p_jmax;
     end

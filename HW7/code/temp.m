@@ -3,7 +3,7 @@ clear
 close all
 clc
 
-method = 1;
+method = 3;
 save_plots = 0;
 
 fsmach = 1.265;   % Mach number at the entrance 
@@ -15,6 +15,9 @@ gamma = 1.4;    % ratio of specific heats
 cfl = 0.9; 
 max_iter = 4000;
 residual_history = zeros(max_iter, 1);
+
+unsteady = 0;
+converged = 0;
 
 jmaxes = [200];
 
@@ -30,9 +33,26 @@ for jmax = jmaxes
   if method == 1
     %%%%%% generate initial conditions %%%%%%
     % no shock
+    xsh = -1;
+    % use predictor-corrector method 
+    march_type = 1;
+    % use space marching
+    [rho_sp,u_sp,p_sp,e_sp,amach_sp] = spacemarch(gamma,fsmach,p0,rho0,xsh,x,area,march_type);
+  elseif method == 2
+    %%%%%% generate initial conditions %%%%%%
+    % shock
     xsh = 4;
     % use predictor-corrector method 
     march_type = 1;
+    % use space marching
+    [rho_sp,u_sp,p_sp,e_sp,amach_sp] = spacemarch(gamma,fsmach,p0,rho0,xsh,x,area,march_type);
+  elseif method == 3
+    %%%%%% generate initial conditions %%%%%%
+    % shock
+    xsh = 4;
+    % use predictor-corrector method 
+    march_type = 1;
+    unsteady = 1;
     % use space marching
     [rho_sp,u_sp,p_sp,e_sp,amach_sp] = spacemarch(gamma,fsmach,p0,rho0,xsh,x,area,march_type);
   end
@@ -60,16 +80,32 @@ for jmax = jmaxes
     % compute residuals 
     res = compute_residual(Qh, Q, Fhp, Fhm, area, dx, dt, x);
 
-    % extrap for now
-    % Qh(:,jmax) = Qh(:,jmax-1)
-    res = boundary_condition(Q, c, dt, dx, area, gamma, res, p_end);
+    % apply boundary conditions at the exit using compatibility conditions
+    if unsteady == 1 && converged == 1
+      p0 = p_end;
+      amp = 0.3;
+      T = 500 * dt;
+      p_exit = p0 * (1 + amp * sin(2 * pi * t / T));
+    else 
+      p_exit = p_end;
+    end
 
+    res = boundary_condition(Q, c, dt, dx, area, gamma, res, p_exit);
 
+    
     % update conservative variables
     Qh = Qh + res;
     t = t + dt;
     res_list = [res_list, norm(res, 'fro')];
-
+    
+    % check if L2 of residual is 5 orders below the initial residual
+    if i > 1 && norm(res, 'fro') < 1e-3 * norm(res_list(1), 'fro')
+      converged = 1;
+      max_iter = max_iter + 2000;
+      if unsteady == 1
+        disp('beginning unsteady simulation')
+      end
+    end
     figure(2)
     plot(x, Q(3,:), 'r-', 'LineWidth', 2); hold on
     plot(x, p_sp); hold off

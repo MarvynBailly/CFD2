@@ -35,5 +35,4 @@ function [Fhp, Fhm] = steger_warming_flux(Q, A, gamma)
             (H(j) + u(j)*a(j)) * lambda2m(j) + (H(j) - u(j)*a(j)) * lambda3m(j)];
     end
 
-    % Optional: multiply by area outside this function (in residual)
 end
