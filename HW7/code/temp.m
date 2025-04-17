@@ -17,7 +17,7 @@ cfl = 0.9;
 max_iter = 2000;
 residual_history = zeros(max_iter, 1);
 
-amplitude = 0.04; % for graph 4.X
+amplitude = 0.3; % for graph 4.X
 iteration_chop = 1500:50:2000; % for graph 4.1 and 4.4
 
 unsteady = 0;
