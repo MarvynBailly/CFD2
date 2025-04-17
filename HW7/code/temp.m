@@ -3,7 +3,8 @@ clear
 close all
 clc
 
-method = 3;
+method = 2;
+animation = 0;
 save_plots = 0;
 
 fsmach = 1.265;   % Mach number at the entrance 
@@ -27,7 +28,7 @@ for jmax = jmaxes
   area = calcarea(x);
   t = 0;
   res_list = [];
-  % error = []; Need exact solution?
+  err_list = [];
 
   % no shock
   if method == 1
@@ -81,9 +82,8 @@ for jmax = jmaxes
     res = compute_residual(Qh, Q, Fhp, Fhm, area, dx, dt, x);
 
     % apply boundary conditions at the exit using compatibility conditions
-    if unsteady == 1 && converged == 1
+    if unsteady == 1% && converged == 1
       p0 = p_end;
-      amp = 0.3;
       T = 500 * dt;
       p_exit = p0 * (1 + amp * sin(2 * pi * t / T));
     else 
@@ -91,12 +91,13 @@ for jmax = jmaxes
     end
 
     res = boundary_condition(Q, c, dt, dx, area, gamma, res, p_exit);
-
+    err = [rho_sp;u_sp;p_sp] - Qh;
     
     % update conservative variables
     Qh = Qh + res;
     t = t + dt;
-    res_list = [res_list, norm(res, 'fro')];
+    res_list = [res_list, norm(res, 'fro')/sqrt(jmax)];
+    err_list = [err_list, norm(err, 'fro')/sqrt(jmax)];
     
     % check if L2 of residual is 5 orders below the initial residual
     if i > 1 && norm(res, 'fro') < 1e-3 * norm(res_list(1), 'fro')
@@ -106,10 +107,13 @@ for jmax = jmaxes
         disp('beginning unsteady simulation')
       end
     end
-    figure(2)
-    plot(x, Q(3,:), 'r-', 'LineWidth', 2); hold on
-    plot(x, p_sp); hold off
-    title(['Pressure, t=',num2str(t)])
+
+    if animation
+        figure(2)
+        plot(x, Q(3,:), 'r-', 'LineWidth', 2); hold on
+        plot(x, p_sp); hold off
+        title(['Pressure, t=',num2str(t)])
+    end
 
     % pause(0.1)
   end
@@ -139,6 +143,9 @@ for jmax = jmaxes
   plot(res_list, 'r-', 'LineWidth', 2)
   grid on
 
+  figure(5)
+  plot(err_list, 'r-', 'LineWidth', 2)
+  grid on
 end
 
 
