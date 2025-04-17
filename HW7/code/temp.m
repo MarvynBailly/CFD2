@@ -4,10 +4,8 @@ close all
 clc
 
 method = 3;
-animation = 1;
+animation = 0;
 save_plots = 0;
-amplitude = 0.04;
-
 
 fsmach = 1.265;   % Mach number at the entrance 
 rho0 = 0.5;  % density at the entrance 
@@ -18,6 +16,9 @@ gamma = 1.4;    % ratio of specific heats
 cfl = 0.9; 
 max_iter = 2000;
 residual_history = zeros(max_iter, 1);
+
+amplitude = 0.04; % for graph 4.X
+iteration_chop = 1500:50:2000; % for graph 4.1 and 4.4
 
 unsteady = 0;
 converged = 0;
@@ -120,7 +121,12 @@ for jmax = jmaxes
         title(['Pressure, t=',num2str(t)])
     end
 
-    % pause(0.1)
+    if ismember(i, iteration_chop) % for graph 4.1 and 4.4
+        figure(6)
+        plot(x, Q(3,:), 'LineWidth', 1); hold on
+        grid on
+    end
+
   end
 
   % plot things
@@ -151,6 +157,11 @@ for jmax = jmaxes
   figure(5)
   plot(err_list, 'r-', 'LineWidth', 2)
   grid on
+
+  figure(6)
+  legend(num2str(iteration_chop'), Location="best")
+  xlabel('x')
+  ylabel('p')
 end
 
 
