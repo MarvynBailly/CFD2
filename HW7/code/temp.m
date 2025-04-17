@@ -16,7 +16,7 @@ cfl = 0.9;
 max_iter = 4000;
 residual_history = zeros(max_iter, 1);
 
-jmaxes = [61];
+jmaxes = [200];
 
 for jmax = jmaxes
   dx = 10./(jmax-1);
@@ -38,15 +38,13 @@ for jmax = jmaxes
   end
 
 
-  rho_end = rho_sp(end);
-  u_end = u_sp(end);
   p_end = p_sp(end);  
-  % Qh = convert_to_conservative(Qh, rho0*rho_sp./rho_sp, u_sp(1)*u_sp./u_sp, e_sp(1)*e_sp./e_sp, area);
+  % Qh = convert_to_conservative(rho0*rho_sp./rho_sp, u_sp(1)*u_sp./u_sp, e_sp(1)*e_sp./e_sp, area);
   Qh = convert_to_conservative(rho_sp, u_sp, e_sp, area);
   
   %%%%%% Explicit Time Marching %%%%%%
   % use Steger-Warming method to compute fluxes
-  for i = 1:500
+  for i = 1:max_iter
     % compute primitive variables
     Q = convert_to_primitive(Qh, gamma, area);
 
@@ -54,7 +52,7 @@ for jmax = jmaxes
     c = sqrt(gamma .* Q(3,:) ./ Q(1,:));
 
     % compute local timesteps
-    dt = compute_timestep(cfl, dx, Q(2,:), c);    
+    dt = compute_timestep(cfl, dx, Q(2,:), c);  
 
     % compute fluxes
     [Fhp, Fhm] = steger_warming_flux(Q, area, gamma);
@@ -140,8 +138,8 @@ function residual = compute_residual(Qh, Q, Fhp, Fhm, area, dx, dt, x)
   residual = zeros(3, N);
   for j = 2:size(Qh, 2)-1
     residual(:, j) = -dt / dx * (Fhp(:, j) - Fhp(:, j-1) + Fhm(:, j+1) - Fhm(:, j));
-    % residual(2, j) = residual(2,j)  + dt / dx * (Q(3,j) * abs((0.5*(area(j+1)+area(j)) - 0.5*(area(j)+area(j-1)))));
-    residual(2, j) = residual(2,j)  + dt / dx * (Q(3,j) * (calcarea(j*dx + 0.5 *dx) - calcarea(j*dx - 0.5 *dx)));
+    residual(2, j) = residual(2,j)  + dt / dx * (Q(3,j) * abs((0.5*(area(j+1)+area(j)) - 0.5*(area(j)+area(j-1)))));
+    % residual(2, j) = residual(2,j)  + dt / dx * (Q(3,j) * (calcarea(j*dx + 0.5 *dx) - calcarea(j*dx - 0.5 *dx)));
   end  
 end
 
