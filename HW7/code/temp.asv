@@ -6,6 +6,7 @@ clc
 method = 2;
 animation = 0;
 save_plots = 0;
+amplitude = 0.04;
 
 fsmach = 1.265;   % Mach number at the entrance 
 rho0 = 0.5;  % density at the entrance 
@@ -73,6 +74,9 @@ for jmax = jmaxes
     c = sqrt(gamma .* Q(3,:) ./ Q(1,:));
 
     % compute local timesteps
+    if method == 3
+        dt = 0.017695209471134; % Steady state CFL
+    else
     dt = compute_timestep(cfl, dx, Q(2,:), c);  
 
     % compute fluxes
@@ -84,10 +88,8 @@ for jmax = jmaxes
     % apply boundary conditions at the exit using compatibility conditions
     if unsteady == 1% && converged == 1
       p0 = p_end;
-      amp = 0.04;
       T = 500 * dt;
-      %p_exit = p0 * (1 + amp * sin(2 * pi * t / T));
-      p_exit = p0 * (1 + amp * sin(2 * pi * t / T));
+      p_exit = p0 * (1 + amplitude * sin(2 * pi * t / T));
     else 
       p_exit = p_end;
     end

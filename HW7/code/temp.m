@@ -3,9 +3,11 @@ clear
 close all
 clc
 
-method = 2;
-animation = 0;
+method = 3;
+animation = 1;
 save_plots = 0;
+amplitude = 0.04;
+
 
 fsmach = 1.265;   % Mach number at the entrance 
 rho0 = 0.5;  % density at the entrance 
@@ -14,7 +16,7 @@ gamma = 1.4;    % ratio of specific heats
 
 
 cfl = 0.9; 
-max_iter = 4000;
+max_iter = 2000;
 residual_history = zeros(max_iter, 1);
 
 unsteady = 0;
@@ -73,7 +75,11 @@ for jmax = jmaxes
     c = sqrt(gamma .* Q(3,:) ./ Q(1,:));
 
     % compute local timesteps
-    dt = compute_timestep(cfl, dx, Q(2,:), c);  
+    if method == 3
+        dt = 0.017695209471134; % Steady state CFL
+    else
+        dt = compute_timestep(cfl, dx, Q(2,:), c);
+    end
 
     % compute fluxes
     [Fhp, Fhm] = steger_warming_flux(Q, area, gamma);
@@ -82,10 +88,9 @@ for jmax = jmaxes
     res = compute_residual(Qh, Q, Fhp, Fhm, area, dx, dt, x);
 
     % apply boundary conditions at the exit using compatibility conditions
-    if unsteady == 1% && converged == 1
+    if unsteady == 1 %&& converged == 1
       p0 = p_end;
-      T = 500 * dt;
-      p_exit = p0 * (1 + amp * sin(2 * pi * t / T));
+      p_exit = p0 * (1 + amplitude * sin(i*2*pi/500));
     else 
       p_exit = p_end;
     end
