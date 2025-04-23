@@ -3,10 +3,10 @@ clear
 close all
 clc
 
-method = 2;
+method = 3;
 animation = 1;
 save_plots = 0;
-implicit = 1;
+implicit = 0;
 
 fsmach = 1.265;   % Mach number at the entrance 
 rho0 = 0.5;  % density at the entrance 
@@ -17,7 +17,7 @@ iteration_chop = []; % For 2.1, 3.1, 4.1, 4.4
 early_stop = 1; % For 2.3, 2.4, 3.3, 3.4
 final_error_list = []; % For 2.4, 3.4
 
-cfl = 1.7; 
+cfl = 0.9; 
 max_iter = 4000;
 residual_history = zeros(max_iter, 1);
 
@@ -79,6 +79,7 @@ for jmax = jmaxes
   for i = 1:max_iter
     Q = convert_to_primitive(Qh, gamma, area);
     c = sqrt(gamma .* Q(3,:) ./ Q(1,:));
+    [Jp, Jm] = Flux_Jacobian(Q, gamma);
 
     % compute local timesteps
     if method == 3
@@ -96,14 +97,11 @@ for jmax = jmaxes
     end
     res_jmax = boundary_condition(Q, c, dt, dx, area, gamma, p_exit, implicit);
 
+    
     [Fhp, Fhm] = steger_warming_flux(Q, area, gamma);
-    if implicit
-        [Jp, Jm] = Flux_Jacobian(Qh, gamma);
-        res = compute_residual_Im(Qh, Q, Fhp, Fhm, area, dx, dt, x, Jp, Jm, res_jmax);
-    else
-        res = compute_residual(Qh, Q, Fhp, Fhm, area, dx, dt, x);
-    end
 
+    res = compute_residual(Qh, Q, Fhp, Fhm, area, dx, dt, x, implicit);
+    
     res(:,end) = res_jmax;
     err = [rho_sp;u_sp;p_sp] - Q;
     
@@ -236,36 +234,18 @@ function dt = compute_timestep(cfl, dx, u, c)
   dt = min(dt_local, [], "all");
 end
 
-function [Jp, Jm] = Flux_Jacobian(Qh, gamma)
-    N = size(Qh,2);
+function [Jp, Jm] = Flux_Jacobian(Q, gamma)
+    Qin = Q(:,2:end-1);
+    N = size(Qin,2);
     J = zeros(N,3,3);
-    
+    e = Qin(3,:)/(gamma-1) + 0.5*Qin(1,:).*Qin(2,:).^2;
     J(:,1,2) = 1;
-    J(:,2,1) = (gamma-3)/2 * (Qh(2,:)./Qh(1,:)).^2;
-    J(:,2,2) = (3-gamma) * (Qh(2,:)./Qh(1,:));
+    J(:,2,1) = (gamma-3)/2 * Qin(2,:).^2;
+    J(:,2,2) = (3-gamma) * Qin(2,:);
     J(:,2,3) = gamma-1;
-    J(:,3,1) = (gamma-1)*(Qh(2,:)./Qh(1,:)).^3 - gamma.*Qh(3,:).*Qh(2,:)./Qh(1,:).^2;
-    J(:,3,2) = gamma*Qh(3,:)./Qh(1,:) - 3/2*(gamma-1)*(Qh(2,:)./Qh(1,:)).^2;
-    J(:,3,3) = gamma*Qh(2,:)./Qh(1,:);
-
-    Jp = 0.5 * (J+abs(J));
-    Jm = 0.5 * (J-abs(J));
-end
-
-
-
-function [Jp, Jm] = Flux_Jacobian_(Q, gamma)
-    N = size(Q,2);
-    J = zeros(N,3,3);
-    
-    e = Q(3,:)/(gamma-1) + 0.5*Q(1,:).*Q(2,:).^2;
-    J(:,1,2) = 1;
-    J(:,2,1) = (gamma-3)/2 * Q(2,:).^2;
-    J(:,2,2) = (3-gamma) * Q(2,:);
-    J(:,2,3) = gamma-1;
-    J(:,3,1) = (gamma-1)*Q(2,:).^3 - gamma*e.*Q(2,:)./Q(1,:);
-    J(:,3,2) = gamma*e.*Q(1,:) - 3/2*(gamma-1)*Q(2,:).^2;
-    J(:,3,3) = gamma*Q(2,:);
+    J(:,3,1) = (gamma-1)*Qin(2,:).^3 - gamma*e.*Qin(2,:)./Qin(1,:);
+    J(:,3,2) = gamma*e.*Qin(1,:) - 3/2*(gamma-1)*Qin(2,:).^2;
+    J(:,3,3) = gamma*Qin(2,:);
 
     Jp = 0.5 * (J+abs(J));
     Jm = 0.5 * (J-abs(J));

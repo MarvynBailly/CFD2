@@ -1,6 +1,7 @@
-function res = boundary_condition(Q, c, dt, dx, area, gamma, res, p_end, implicit)
+function res_jmax = boundary_condition(Q, c, dt, dx, area, gamma, p_end, implicit)
  % apply boundary conditions at the exit using compatibility conditions
  % compute R1, R2, and R3
+    res_jmax = zeros(3,1);
     u_jmax = Q(2, end);
     u_jmaxm1 = Q(2, end-1);
     rho_jmax = Q(1, end);
@@ -47,7 +48,7 @@ function res = boundary_condition(Q, c, dt, dx, area, gamma, res, p_end, implici
     du = (R2 - dp) / (rho_jmax * c(end));
 
     % apply to conserved variables
-   res(1, end) =  area(end) * drho;
-   res(2, end) =  area(end) * ((rho_jmax + drho) * (u_jmax + du) - rho_jmax * u_jmax);
-   res(3, end) =  area(end) * ( (p_jmax + dp)/(gamma -1) + 0.5 * (rho_jmax + drho) * (u_jmax + du)^2 - p_jmax/(gamma -1) - 0.5 * rho_jmax * u_jmax^2);  
+   res_jmax(1) =  area(end) * drho;
+   res_jmax(2) =  area(end) * ((rho_jmax + drho) * (u_jmax + du) - rho_jmax * u_jmax);
+   res_jmax(3) =  area(end) * ( (p_jmax + dp)/(gamma -1) + 0.5 * (rho_jmax + drho) * (u_jmax + du)^2 - p_jmax/(gamma -1) - 0.5 * rho_jmax * u_jmax^2);  
 end

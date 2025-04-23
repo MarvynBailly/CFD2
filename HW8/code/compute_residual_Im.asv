@@ -1,0 +1,23 @@
+function residual = compute_residual_Im(Qh, Q, Fhp, Fhm, area, dx, dt, x, Jp, Jm, res_jmax)
+    N = size(Qh, 2)-2;
+    Dq_pred = -dt/dx*(Fhp(:,2:end-1)-Fhp(:,1:end-2)+Fhm(:,3:end)-Fhm(:,2:end-1));
+    Dq_pred(2,:) = Dq_pred(2,:) + dt/dx*(Q(3,2:end-1) .* ...
+                   abs((0.5*(area(3:end)+area(2:end-1))-0.5*(area(2:end-1)+area(1:end-2)))));
+
+    SJ = zeros(N,3,3);
+    SJ(:,2,3) = abs((0.5*(area(3:end)+area(2:end-1))-0.5*(area(2:end-1)+area(1:end-2))));
+
+    I = permute(repmat(eye(3),[1,1,N]), [3 1 2]);
+
+    A = -dt/dx * Jp(1:end-2,:,:);
+    B = I + dt/dx*(Jp(2:end-1,:,:)-Jm(2:end-1,:,:)) - dt*SJ;
+    C = dt/dx * Jm(3:end,:,:);
+    D = Dq_pred;
+    D(:,1) = D(:,1) - squeeze(A(1,:,:))*zeros(3,1); % Fixed left boundary
+    D(:,end) = D(:,end) - squeeze(C(end,:,:))*res_jmax; % Right compability relation
+
+    D = D(:);
+    M = 
+end
+
+

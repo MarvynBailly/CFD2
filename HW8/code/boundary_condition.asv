@@ -1,4 +1,4 @@
-function res = boundary_condition(Q, c, dt, dx, area, gamma, res, p_end)
+function res_jmax = boundary_condition(Q, c, dt, dx, area, gamma, p_end, implicit)
  % apply boundary conditions at the exit using compatibility conditions
  % compute R1, R2, and R3
     u_jmax = Q(2, end);
@@ -13,15 +13,19 @@ function res = boundary_condition(Q, c, dt, dx, area, gamma, res, p_end)
     alpha2 = (u_jmaxm1+c(end)) * (dt/dx);
     alpha3 = (u_jmaxm1-c(end)) * (dt/dx);
 
-    R1 = - alpha1/(1+alpha1) * (rho_jmax - rho_jmaxm1 - c(end)^(-2) * (p_jmax-p_jmaxm1));
-    R2 = - alpha2/(1+alpha2) * (p_jmax - p_jmaxm1 + (rho_jmax*c(end)) * (u_jmax-u_jmaxm1)) ...
-         - 1/(1+alpha2) * (dt/dx) * (rho_jmax*u_jmax*c(end)^2/area(end)) * (area(end)-area(end-1));
-
-    R1 = - u_jmax * (dt/dx) * ((rho_jmax - rho_jmaxm1) - (1/c(end)^2) * (p_jmax - p_jmaxm1));
-    R2 = - (dt/dx) * ((u_jmax + c(end)) * (p_jmax - p_jmaxm1) + (rho_jmax * c(end)) * (u_jmax - u_jmaxm1) ...
-        - (rho_jmax * u_jmax * c(end)^2 / area(end)) * (area(end) - area(end-1)));
-    R3 = - (dt/dx) * ((u_jmax - c(end)) * (p_jmax - p_jmaxm1) - (rho_jmax * c(end)) * (u_jmax - u_jmaxm1) ...
-        - (rho_jmax * u_jmax * c(end)^2 / area(end)) * (area(end) - area(end-1)));
+    if implicit
+        R1 = - alpha1/(1+alpha1) * (rho_jmax - rho_jmaxm1 - c(end)^(-2) * (p_jmax-p_jmaxm1));
+        R2 = - alpha2/(1+alpha2) * (p_jmax - p_jmaxm1 + (rho_jmax*c(end)) * (u_jmax-u_jmaxm1)) ...
+             - 1/(1+alpha2) * (dt/dx) * (rho_jmax*u_jmax*c(end)^2/area(end)) * (area(end)-area(end-1));
+        R3 = - alpha3/(1+alpha3) * (p_jmax - p_jmaxm1 - (rho_jmax*c(end)) * (u_jmax-u_jmaxm1)) ...
+             - 1/(1+alpha2) * (dt/dx) * (rho_jmax*u_jmax*c(end)^2/area(end)) * (area(end)-area(end-1));
+    else
+        R1 = - u_jmax * (dt/dx) * ((rho_jmax - rho_jmaxm1) - (1/c(end)^2) * (p_jmax - p_jmaxm1));
+        R2 = - (dt/dx) * ((u_jmax + c(end)) * (p_jmax - p_jmaxm1) + (rho_jmax * c(end)) * (u_jmax - u_jmaxm1) ...
+            - (rho_jmax * u_jmax * c(end)^2 / area(end)) * (area(end) - area(end-1)));
+        R3 = - (dt/dx) * ((u_jmax - c(end)) * (p_jmax - p_jmaxm1) - (rho_jmax * c(end)) * (u_jmax - u_jmaxm1) ...
+            - (rho_jmax * u_jmax * c(end)^2 / area(end)) * (area(end) - area(end-1)));
+    end
 
     % R1 = - u_jmax * (dt/dx) * ((Q(1, end) - Q(1, end-1)) - (1/c(end)^2) *(Q(3, end) - Q(3, end-1)));
     %    - (1/c(end)^2) * (gamma * Q(3, end) * Q(1, end) / area(end)) * - (Q(1, end) * Q(2, end) / area(end));
@@ -43,7 +47,7 @@ function res = boundary_condition(Q, c, dt, dx, area, gamma, res, p_end)
     du = (R2 - dp) / (rho_jmax * c(end));
 
     % apply to conserved variables
-   res(1, end) =  area(end) * drho;
-   res(2, end) =  area(end) * ((rho_jmax + drho) * (u_jmax + du) - rho_jmax * u_jmax);
-   res(3, end) =  area(end) * ( (p_jmax + dp)/(gamma -1) + 0.5 * (rho_jmax + drho) * (u_jmax + du)^2 - p_jmax/(gamma -1) - 0.5 * rho_jmax * u_jmax^2);  
+   res_jmax(1) =  area(end) * drho;
+   res_jmax(2) =  area(end) * ((rho_jmax + drho) * (u_jmax + du) - rho_jmax * u_jmax);
+   res_jmax(3) =  area(end) * ( (p_jmax + dp)/(gamma -1) + 0.5 * (rho_jmax + drho) * (u_jmax + du)^2 - p_jmax/(gamma -1) - 0.5 * rho_jmax * u_jmax^2);  
 end
