@@ -44,7 +44,7 @@ p0 = 0.379;      % pressure at the entrance
 xlength = 10.;  % length of the nozzle
 xsh = 4;      % location if use fixed shock location
 %
-irefine = 4;          % change this parameter to refine the space mesh (and time)
+irefine = 4.5;          % change this parameter to refine the space mesh (and time)
 jmax = 40*irefine+1;  % number of mesh points along the nozzle
 % needed for time marching
 cfl = 0.90;           % Determines time step size, make less than 1
@@ -221,3 +221,13 @@ set(gca,'FontSize',16,'LineWidth',2.0,'FontWeight','demi');
 title(' Convergence Time History')
 xlabel('Iteration'); ylabel('Residual')
 % finished!
+
+
+
+% Save primitive variables
+rho_exact = rho;  
+u_exact   = u;
+p_exact   = p;
+x_exact   = x;
+
+save('exact_solution.mat', 'rho_exact', 'u_exact', 'p_exact', 'x_exact');
