@@ -19,7 +19,7 @@ function res_jmax = boundary_condition(Q, c, dt, dx, area, gamma, p_end, implici
         R2 = - alpha2/(1+alpha2) * (p_jmax - p_jmaxm1 + (rho_jmax*c(end)) * (u_jmax-u_jmaxm1)) ...
              - 1/(1+alpha2) * (dt/dx) * (rho_jmax*u_jmax*c(end)^2/area(end)) * (area(end)-area(end-1));
         R3 = - alpha3/(1+alpha3) * (p_jmax - p_jmaxm1 - (rho_jmax*c(end)) * (u_jmax-u_jmaxm1)) ...
-             - 1/(1+alpha2) * (dt/dx) * (rho_jmax*u_jmax*c(end)^2/area(end)) * (area(end)-area(end-1));
+             - 1/(1+alpha3) * (dt/dx) * (rho_jmax*u_jmax*c(end)^2/area(end)) * (area(end)-area(end-1));
     else
         R1 = - u_jmax * (dt/dx) * ((rho_jmax - rho_jmaxm1) - (1/c(end)^2) * (p_jmax - p_jmaxm1));
         R2 = - (dt/dx) * ((u_jmax + c(end)) * (p_jmax - p_jmaxm1) + (rho_jmax * c(end)) * (u_jmax - u_jmaxm1) ...
@@ -40,7 +40,6 @@ function res_jmax = boundary_condition(Q, c, dt, dx, area, gamma, p_end, implici
     if (u_jmaxm1 >= c(end-1))
         dp = 0.5 * (R2 + R3);
     else
-        % change this to sin once converged ?
         dp = p_end - p_jmax;
     end
 

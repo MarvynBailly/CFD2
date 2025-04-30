@@ -17,7 +17,7 @@ iteration_chop = []; % For 2.1, 3.1, 4.1, 4.4
 early_stop = 1; % For 2.3, 2.4, 3.3, 3.4
 final_error_list = []; % For 2.4, 3.4
 
-cfl = 1.71; 
+cfl = 1.9; 
 max_iter = 4000;
 residual_history = zeros(max_iter, 1);
 
@@ -94,6 +94,7 @@ for jmax = jmaxes
     else 
       p_exit = p_end;
     end
+    
     res_jmax = boundary_condition(Q, c, dt, dx, area, gamma, p_exit, implicit);
 
     [Fhp, Fhm] = steger_warming_flux(Q, area, gamma);
