@@ -6,7 +6,7 @@ clc
 method = 2;
 animation = 0;
 save_plots = 0;
-implicit = 0;
+implicit = 1;
 
 fsmach = 1.265;   % Mach number at the entrance 
 rho0 = 0.5;  % density at the entrance 
@@ -17,12 +17,12 @@ gamma = 1.4;    % ratio of specific heats
 early_stop = 1; % For 2.3, 2.4, 3.3, 3.4
 % final_error_list = []; % For 2.4, 3.4
 
-plot_iter = 50;
-unsteady_iters = 500;
+plot_iter = 20;
+unsteady_iters = 200;
 break_iter = 0;
 unsteady_start_iter = 0;
 
-cfl = 0.9; 
+cfl = 2.25; 
 max_iter = 4000;
 residual_history = zeros(max_iter, 1);
 
@@ -65,7 +65,7 @@ for jmax = jmaxes
     % use space marching
     [rho_sp,u_sp,p_sp,e_sp,amach_sp] = spacemarch(gamma,fsmach,p0,rho0,xsh,x,area,march_type);
     plot_p_vs_t = 1;
-    amplitude = 0.03; % for graph 4.X
+    amplitude = 0.2; % for graph 4.X
     unsteady = 1;
   elseif method == 3
     %%%%%% generate initial conditions %%%%%%
@@ -105,7 +105,7 @@ for jmax = jmaxes
     % apply boundary conditions at the exit using compatibility conditions
     if unsteady == 1 && converged == 1
       p0 = p_end;
-      p_exit = p0 * (1 + amplitude * sin(i*2*pi/500));
+      p_exit = p0 * (1 + amplitude * sin(i*2*pi/200));
     else 
       p_exit = p_end;
     end
@@ -116,14 +116,14 @@ for jmax = jmaxes
     if implicit
         % [Jp, Jm] = Flux_Jacobian(Qh, gamma);
         [Jp, Jm] = Flux_Jacobian_Spectral(Q, gamma);
-        res = compute_residual_Im(Qh, Q, Fhp, Fhm, area, dx, dt, x, Jp, Jm, res_jmax);
+        [res,M] = compute_residual_Im(Qh, Q, Fhp, Fhm, area, dx, dt, x, Jp, Jm, res_jmax);
     else
         res = compute_residual(Qh, Q, Fhp, Fhm, area, dx, dt, x);
     end
 
     res(:,end) = res_jmax;
-    % err = [rho_sp;u_sp;p_sp] - Q;
-    err = [rho_exact;u_exact;p_exact] - Q;
+    err = [rho_sp;u_sp;p_sp] - Q;
+    % err = [rho_exact;u_exact;p_exact] - Q;
     
     % update conservative variables
     Qh = Qh + res;
@@ -155,7 +155,7 @@ for jmax = jmaxes
     %     t_history = [t_history, t-dt];
     % end
 
-    if mod(i - unsteady_start_iter, plot_iter) == 0 && converged == 1
+    if mod(i - unsteady_start_iter, plot_iter) == 1 && converged == 1
       p_history = [p_history, Q(3,:).'];
       rho_history = [rho_history, Q(1,:).'];
       t_history = [t_history, t-dt];
@@ -168,7 +168,7 @@ for jmax = jmaxes
     end
 
     % check if L2 of residual is 5 orders below the initial residual
-    if early_stop && res_list(end) < 1e-5 * res_list(1)
+    if early_stop && res_list(end) < 1e-2 * res_list(1)
       disp(['residual is 5 orders below the initial residual by iteration ', num2str(i)]);
       % figure(8)
       % plot(x, Q(3,:), 'LineWidth', 1); hold on

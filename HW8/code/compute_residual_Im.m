@@ -1,4 +1,4 @@
-function residual = compute_residual_Im(Qh, Q, Fhp, Fhm, area, dx, dt, x, Jp, Jm, res_jmax)
+function [residual, M] = compute_residual_Im(Qh, Q, Fhp, Fhm, area, dx, dt, x, Jp, Jm, res_jmax)
     areaint  = calcarea(x + 0.5 * dx);
     
     N = size(Qh, 2)-2;
@@ -46,6 +46,7 @@ function residual = compute_residual_Im(Qh, Q, Fhp, Fhm, area, dx, dt, x, Jp, Jm
     M = block_tridiagonal_matrix_vectorized(A, B, C);
 
     residual = M \ D;
+    %%
     residual = reshape(residual, 3, []);
     residual = [zeros(3,1), residual, zeros(3,1)];
 end
