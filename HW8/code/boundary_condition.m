@@ -1,6 +1,7 @@
 function res_jmax = boundary_condition(Q, c, dt, dx, area, gamma, p_end, implicit)
  % apply boundary conditions at the exit using compatibility conditions
  % compute R1, R2, and R3
+ % looks like everything is okay here
     res_jmax = zeros(3,1);
     u_jmax = Q(2, end);
     u_jmaxm1 = Q(2, end-1);
@@ -11,13 +12,17 @@ function res_jmax = boundary_condition(Q, c, dt, dx, area, gamma, p_end, implici
 
     % Implicit special treatment
     alpha1 = u_jmaxm1 * (dt/dx);
-    alpha2 = (u_jmaxm1+c(end)) * (dt/dx);
-    alpha3 = (u_jmaxm1-c(end)) * (dt/dx);
+    alpha2 = (u_jmaxm1+c(end-1)) * (dt/dx);
+    alpha3 = (u_jmaxm1-c(end-1)) * (dt/dx);
 
     if implicit
         R1 = - alpha1/(1+alpha1) * (rho_jmax - rho_jmaxm1 - c(end)^(-2) * (p_jmax-p_jmaxm1));
+
+
         R2 = - alpha2/(1+alpha2) * (p_jmax - p_jmaxm1 + (rho_jmax*c(end)) * (u_jmax-u_jmaxm1)) ...
              - 1/(1+alpha2) * (dt/dx) * (rho_jmax*u_jmax*c(end)^2/area(end)) * (area(end)-area(end-1));
+        
+        
         R3 = - alpha3/(1+alpha3) * (p_jmax - p_jmaxm1 - (rho_jmax*c(end)) * (u_jmax-u_jmaxm1)) ...
              - 1/(1+alpha3) * (dt/dx) * (rho_jmax*u_jmax*c(end)^2/area(end)) * (area(end)-area(end-1));
     else

@@ -1,14 +1,34 @@
 function residual = compute_residual_Im(Qh, Q, Fhp, Fhm, area, dx, dt, x, Jp, Jm, res_jmax)
+    areaint  = calcarea(x + 0.5 * dx);
+    
     N = size(Qh, 2)-2;
 
     Dq_pred = -dt/dx*(Fhp(:,2:end-1)-Fhp(:,1:end-2)+Fhm(:,3:end)-Fhm(:,2:end-1));
     
-    Dq_pred(2,:) = Dq_pred(2,:) + dt/dx*(Q(3,2:end-1) .* ...
-                   abs((0.5*(area(3:end)+area(2:end-1))-0.5*(area(2:end-1)+area(1:end-2)))));
+    % Dq_pred(2,:) = Dq_pred(2,:) + dt/dx*(Q(3,2:end-1) .* ...
+    %                (0.5*(area(3:end)+area(2:end-1))-0.5*(area(2:end-1)+area(1:end-2))));
+
+    % Dq_pred(2,:) = Dq_pred(2,:) + dt/dx * (Q(3,2:end-1) .* ...
+    %     ((0.5*(area(3:end)+area(2:end-1)) - 0.5*(area(2:end-1)+area(1:end-2)))));
+    
+    
+    % Dq_pred(2,:) = Dq_pred(2,:) + dt/dx * (Q(3,2:end-1) .* ...
+    %     ((area(3:end) - area(1:end-2)) / 2));
+
+    Dq_pred(2,:) = Dq_pred(2,:) + dt/dx * (Q(3,2:end-1) .* (areaint(2:end-1) - areaint(1:end-2)));
+        
+
+
 
     SJ = zeros(N,3,3);
-    SJ(:,2,3) = abs((0.5*(area(3:end)+area(2:end-1))-0.5*(area(2:end-1)+area(1:end-2))));
-    SJ(:,2,3) = abs((0.5*(area(3:end)+area(2:end-1))-0.5*(area(2:end-1)+area(1:end-2))));
+    % SJ(:,2,3) = abs((0.5*(area(3:end)+area(2:end-1))-0.5*(area(2:end-1)+area(1:end-2))));
+    % SJ(:,2,3) = (0.5*(area(3:end)+area(2:end-1))-0.5*(area(2:end-1)+area(1:end-2)));
+    % SJ(:,2,3) = 
+    SJ(:, 2, 3) = (areaint(2:end-1) - areaint(1:end-2)) / dx;
+
+
+
+    % SJ(:,2,3) = abs((0.5*(area(3:end)+area(2:end-1))-0.5*(area(2:end-1)+area(1:end-2))));
     %gamma = 1.4;
     %SJ(:,2,3) = (gamma-1)*(Qh(3,2:end-1)-0.5*Qh(2,2:end-1).^2./Qh(1,2:end-1)) .* ...
     %            (abs((0.5*(area(3:end)+area(2:end-1))-0.5*(area(2:end-1)+area(1:end-2)))));

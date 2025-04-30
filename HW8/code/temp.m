@@ -17,7 +17,7 @@ iteration_chop = []; % For 2.1, 3.1, 4.1, 4.4
 early_stop = 1; % For 2.3, 2.4, 3.3, 3.4
 final_error_list = []; % For 2.4, 3.4
 
-cfl = 1.9; 
+cfl = 4.5; 
 max_iter = 4000;
 residual_history = zeros(max_iter, 1);
 
@@ -99,7 +99,8 @@ for jmax = jmaxes
 
     [Fhp, Fhm] = steger_warming_flux(Q, area, gamma);
     if implicit
-        [Jp, Jm] = Flux_Jacobian(Qh, gamma);
+        % [Jp, Jm] = Flux_Jacobian(Qh, gamma);
+        [Jp, Jm] = Flux_Jacobian_Spectral(Q, gamma);
         res = compute_residual_Im(Qh, Q, Fhp, Fhm, area, dx, dt, x, Jp, Jm, res_jmax);
     else
         res = compute_residual(Qh, Q, Fhp, Fhm, area, dx, dt, x);
@@ -249,7 +250,7 @@ function [Jp, Jm] = Flux_Jacobian(Qh, gamma)
     J(:,3,2) = gamma*Qh(3,:)./Qh(1,:) - 3/2*(gamma-1)*(Qh(2,:)./Qh(1,:)).^2;
     J(:,3,3) = gamma*Qh(2,:)./Qh(1,:);
 
-    Jp = 0.5 * (J+abs(J));
+    Jp = 0.5 * (J+abs(J)); 
     Jm = 0.5 * (J-abs(J));
 end
 
@@ -273,3 +274,37 @@ function [Jp, Jm] = Flux_Jacobian_(Q, gamma)
 end
 
 
+function [Jp, Jm] = Flux_Jacobian_Spectral(Q, gamma)
+  rho = Q(1,:);
+  u   = Q(2,:);
+  p   = Q(3,:);
+  e   = p./(gamma - 1) + 0.5 * rho .* u.^2;
+
+  m = length(rho);
+  J = zeros(m, 3, 3);  % Full Jacobian at each point
+
+  for j = 1:m
+      % Fill the 3x3 Jacobian matrix at point j
+      J(j,:,:) = [
+          0,                         1,                       0;
+          0.5*(gamma-3)*u(j)^2,      (3-gamma)*u(j),          gamma - 1;
+          (gamma-1)*u(j)^3 - gamma*e(j)*u(j)/rho(j), ...
+          gamma*e(j)/rho(j) - 1.5*(gamma-1)*u(j)^2, ...
+          gamma*u(j)
+      ];
+  end
+
+  % Spectral radius σ = |u| + a
+  a = sqrt(gamma * p ./ rho);
+  sigma = abs(u) + a;
+
+  % Broadcast σ * I at each point
+  Jp = 0.5 * (J + reshape(sigma, [m 1 1]) .* eye3(m));
+  Jm = 0.5 * (J - reshape(sigma, [m 1 1]) .* eye3(m));
+end
+
+function I3 = eye3(N)
+  % Returns N stacked 3×3 identity matrices: size N×3×3
+  I = eye(3);
+  I3 = repmat(reshape(I, 1, 3, 3), N, 1, 1);
+end
