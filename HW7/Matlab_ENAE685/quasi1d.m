@@ -98,7 +98,7 @@ disp([' Calculated initial exit pressure is: ',num2str(pend)]);
 
 
 % compute exact solution
-[rho_ex, u_ex, p_ex, e_ex] = exact_solution(x, gamma, amach0, p0, rho0, 1, xsh);
+% [rho_ex, u_ex, p_ex, e_ex] = exact_solution(x, gamma, amach0, p0, rho0, 1, xsh);
 
 
 
@@ -125,13 +125,13 @@ for iter=1:itmax
 % Boundary condition at j = jmax (subsonic or supersonic exit)
   [dq]=calcbc(gamma,dq,p,rho,u,area,dtdx,dpvar,pend,itperiod,iter,itsteady);
 % Calculate L2norm of the residual
-  normres(iter) = norm(sqrt(dq(1,:).^2+dq(2,:).^2+dq(3,:).^3),2);
+  normres(iter) = norm(sqrt(dq(1,:).^2+dq(2,:).^2+dq(3,:).^2),2);
   if(rem(iter,100) == 0)
     disp([' L2norm of residual is ',num2str(normres(iter)),...
           ' at iteration ',num2str(iter)]);
   end
 % Calculate L2norm of the change
-  normit(iter) = norm(sqrt(dq(1,:).^2+dq(2,:).^2+dq(3,:).^3),2);
+  normit(iter) = norm(sqrt(dq(1,:).^2+dq(2,:).^2+dq(3,:).^2),2);
   if(rem(iter,100) == 0)
 %      pause(1)
     disp([' L2norm of change is ',num2str(normit(iter)),...
@@ -151,8 +151,8 @@ for iter=1:itmax
 
 
   % compute error of numerical against exact solution
-      error = norm(rho - rho_ex, 'fro')/sqrt(jmax);
-  err_list = [err_list, error];
+  %     error = norm(rho - rho_ex, 'fro')/sqrt(jmax);
+  % err_list = [err_list, error];
   % disp([' L2norm of error is ',num2str(error),...
           % ' at iteration ',num2str(iter)]);
 
@@ -172,7 +172,7 @@ for iter=1:itmax
     plot(x,p_sp,'m-','LineWidth',2.0)
     hold on;
     plot(x,p,'r-','LineWidth',2.0)
-    plot(x,p_ex,'g-','LineWidth',2.0)
+    % plot(x,p_ex,'g-','LineWidth',2.0)
     if(iter > itsteady) plot(x,p_steady,'g-','LineWidth',2.0); end
     hold off;
 % This is the last oscillatory period so overlay pressure plots
@@ -216,7 +216,7 @@ figure(3)
 semilogy(1:iter,normit,'ro','LineWidth',2.0)
 hold on;
 semilogy(1:iter,normres,'r--','LineWidth',2.0)
-semilogy(1:iter,err_list,'g-','LineWidth',2.0)
+% semilogy(1:iter,err_list,'g-','LineWidth',2.0)
 set(gca,'FontSize',16,'LineWidth',2.0,'FontWeight','demi');
 title(' Convergence Time History')
 xlabel('Iteration'); ylabel('Residual')

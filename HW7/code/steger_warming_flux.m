@@ -1,4 +1,5 @@
 function [Fhp, Fhm] = steger_warming_flux(Q, A, gamma)
+    % it looks like this is all good
     N = size(Q, 2);
     Fhp = zeros(3, N);
     Fhm = zeros(3, N);
@@ -10,14 +11,16 @@ function [Fhp, Fhm] = steger_warming_flux(Q, A, gamma)
     a = sqrt(gamma * p ./ rho);
     H = (p / (gamma - 1) + 0.5 * rho .* u.^2 + p) ./ rho;  % total enthalpy
 
-    % Split eigenvalues
-    lambda1p = 0.5 * (u     + abs(u));
-    lambda2p = 0.5 * (u + a + abs(u + a));
-    lambda3p = 0.5 * (u - a + abs(u - a));
+    eps2 = 0.000001;
 
-    lambda1m = 0.5 * (u     - abs(u));
-    lambda2m = 0.5 * (u + a - abs(u + a));
-    lambda3m = 0.5 * (u - a - abs(u - a));
+    % Split eigenvalues
+    lambda1p = 0.5 * (u     + sqrt(u.^2 + eps2));
+    lambda2p = 0.5 * (u + a + sqrt((u + a).^2 + eps2));
+    lambda3p = 0.5 * (u - a + sqrt((u - a).^2 + eps2));
+
+    lambda1m = 0.5 * (u     - sqrt(u.^2 + eps2));
+    lambda2m = 0.5 * (u + a - sqrt((u + a).^2 + eps2));
+    lambda3m = 0.5 * (u - a - sqrt((u - a).^2 + eps2));
 
     for j = 1:N
         % Positive flux

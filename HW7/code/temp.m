@@ -3,7 +3,7 @@ clear
 close all
 clc
 
-method = 1;
+method = 2;
 animation = 0;
 save_plots = 0;
 
@@ -32,6 +32,7 @@ for jmax = jmaxes
   dx = 10./(jmax-1);
   x = 0:dx:10;
   area = calcarea(x);
+  areaint = calcarea(x + 0.5 * dx);  
   t = 0;
   res_list = [];
   err_list = [];
@@ -91,9 +92,10 @@ for jmax = jmaxes
 
     % compute fluxes
     [Fhp, Fhm] = steger_warming_flux(Q, area, gamma);
+    fluxjp = Fhp(:,1:end-1) + Fhm(:,2:end);
 
     % compute residuals 
-    res = compute_residual(Qh, Q, Fhp, Fhm, area, dx, dt, x);
+    res = compute_residual(Qh, Q, Fhp, Fhm, area, areaint, dx, dt, x);
 
     % apply boundary conditions at the exit using compatibility conditions
     if unsteady == 1 %&& converged == 1
@@ -104,6 +106,11 @@ for jmax = jmaxes
     end
 
     res = boundary_condition(Q, c, dt, dx, area, gamma, res, p_exit);
+
+    res(1,1) = 0;
+    res(2,1) = 0;
+    res(3,1) = 0;
+    
     err = [rho_sp;u_sp;p_sp] - Q;
     
     % update conservative variables
@@ -235,13 +242,14 @@ function dt = compute_timestep(cfl, dx, u, c)
   dt = min(dt_local, [], "all");
 end
 
-function residual = compute_residual(Qh, Q, Fhp, Fhm, area, dx, dt, x)
+function residual = compute_residual(Qh, Q, Fhp, Fhm, area, areaint, dx, dt, x)
   % compute residuals
   N = size(Qh, 2);
   residual = zeros(3, N);
   for j = 2:size(Qh, 2)-1
     residual(:, j) = -dt / dx * (Fhp(:, j) - Fhp(:, j-1) + Fhm(:, j+1) - Fhm(:, j));
-    residual(2, j) = residual(2,j)  + dt / dx * (Q(3,j) * abs((0.5*(area(j+1)+area(j)) - 0.5*(area(j)+area(j-1)))));
+    % residual(2, j) = residual(2,j)  + dt / dx * (Q(3,j) * abs((0.5*(area(j+1)+area(j)) - 0.5*(area(j)+area(j-1)))));
+    residual(2, j) = residual(2,j) + dt/dx * Q(3,j) * (areaint(j) - areaint(j-1));
     % residual(2, j) = residual(2,j)  + dt / dx * (Q(3,j) * (calcarea(j*dx + 0.5 *dx) - calcarea(j*dx - 0.5 *dx)));
   end  
 end
