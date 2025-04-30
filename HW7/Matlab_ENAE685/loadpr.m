@@ -1,0 +1,1 @@
+% loadpr.m%function [rho,u,p,e,amach] = loadpr(q,area,gamma)    rho = q(1,:)./area;	u = q(2,:)./q(1,:);	e = q(3,:)./area;	p=(gamma-1)*(e-0.5*rho.*u.^2);	amach = u./sqrt(gamma*p./rho);end

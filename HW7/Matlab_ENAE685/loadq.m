@@ -1,0 +1,1 @@
+% loadq.m%function [q] = loadq(rho,u,e,area)    q(1,:) = rho.*area;	q(2,:) = rho.*u.*area;	q(3,:) = e.*area;end

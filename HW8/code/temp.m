@@ -17,7 +17,7 @@ iteration_chop = []; % For 2.1, 3.1, 4.1, 4.4
 early_stop = 1; % For 2.3, 2.4, 3.3, 3.4
 final_error_list = []; % For 2.4, 3.4
 
-cfl = 1.7; 
+cfl = 1.71; 
 max_iter = 4000;
 residual_history = zeros(max_iter, 1);
 

@@ -1,0 +1,1 @@
+% flux.mfunction [fluxes] = flux(gamma,area,rho,u,p,e);    fluxes(1,:) = rho.*u.*area;	fluxes(2,:) = (rho.*u.^2+p).*area;	fluxes(3,:) = (e+p).*u.*area;end
