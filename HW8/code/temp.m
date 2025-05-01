@@ -3,42 +3,46 @@ clear
 close all
 clc
 
-method = 2;
+method = 1;
 animation = 0;
 save_plots = 0;
-implicit = 1;
+implicit = 0;
 
 fsmach = 1.265;   % Mach number at the entrance 
 rho0 = 0.5;  % density at the entrance 
 p0 = 0.379;   % pressure at the entrance 
 gamma = 1.4;    % ratio of specific heats
 
-% iteration_chop = []; % For 2.1, 3.1, 4.1, 4.4
+iteration_chop = [50, 200, 800]; % For 2.1, 3.1, 4.1, 4.4
 early_stop = 1; % For 2.3, 2.4, 3.3, 3.4
 % final_error_list = []; % For 2.4, 3.4
 
 plot_iter = 20;
-unsteady_iters = 200;
+unsteady_iters = 800;
 break_iter = 0;
 unsteady_start_iter = 0;
 
-cfl = 2.25; 
-max_iter = 4000;
+cfl = 4.5; 
+max_iter = 800;
 residual_history = zeros(max_iter, 1);
 
 p_history = [];
 rho_history = [];
+u_history = [];
 iter_history = [];
 t_history = [];
 
 unsteady = 0;
 converged = 0;
 
-jmaxes = [181];
+jmax = 181;
+cfls = [2.25, 4.5];
+
 
 plot_p_vs_t = 0;
 
-for jmax = jmaxes
+
+for cfl = cfls
   dx = 10./(jmax-1);
   x = 0:dx:10;
   area = calcarea(x);
@@ -122,8 +126,8 @@ for jmax = jmaxes
     end
 
     res(:,end) = res_jmax;
-    err = [rho_sp;u_sp;p_sp] - Q;
-    % err = [rho_exact;u_exact;p_exact] - Q;
+    % err = [rho_sp;u_sp;p_sp] - Q;
+    err = [rho_exact;u_exact;p_exact] - Q;
     
     % update conservative variables
     Qh = Qh + res;
@@ -155,8 +159,16 @@ for jmax = jmaxes
     %     t_history = [t_history, t-dt];
     % end
 
-    if mod(i - unsteady_start_iter, plot_iter) == 1 && converged == 1
+    if mod(i - unsteady_start_iter, plot_iter) == 1 && converged == 1 && method == 2
       p_history = [p_history, Q(3,:).'];
+      rho_history = [rho_history, Q(1,:).'];
+      t_history = [t_history, t-dt];
+      iter_history = [iter_history, i];
+    end
+
+    if ismember(i, iteration_chop) == 1 && method == 1
+      p_history = [p_history, Q(3,:).'];
+      u_history = [u_history, Q(2,:).'];
       rho_history = [rho_history, Q(1,:).'];
       t_history = [t_history, t-dt];
       iter_history = [iter_history, i];
@@ -168,7 +180,7 @@ for jmax = jmaxes
     end
 
     % check if L2 of residual is 5 orders below the initial residual
-    if early_stop && res_list(end) < 1e-2 * res_list(1)
+    if early_stop && res_list(end) < 1e-5 * res_list(1)
       disp(['residual is 5 orders below the initial residual by iteration ', num2str(i)]);
       % figure(8)
       % plot(x, Q(3,:), 'LineWidth', 1); hold on
@@ -207,8 +219,9 @@ for jmax = jmaxes
 
   figure(4)
   semilogy(res_list, '-', 'LineWidth', 2); hold on
-  semilogy(err_list, '-', 'LineWidth', 2);
-  legend('residual', 'error')
+  
+  % semilogy(err_list, '-', 'LineWidth', 2);
+  % legend('residual')
   grid on
 
   % if plot_p_vs_t % for graph 4.2 and 4.3
@@ -217,32 +230,143 @@ for jmax = jmaxes
   else 
     name = 'Explicit';
   end
+
+
   figure(7);
-  hold on;
-  legend_entries = cell(size(t_history));
-  for j = 1:length(t_history)
-      plot(x(:), p_history(:, j), 'LineWidth', 1.5);
-      legend_entries{j} = sprintf('iter = %d', round(iter_history(j)));
-  end
-  xlabel('x'); ylabel('Pressure');
-  title(['Pressure Distribution Snapshots ', name]);
-  legend(legend_entries, 'Location', 'best');
-  grid on;
+hold on;
+
+legend_entries = cell(length(t_history) + 1, 1);
+
+for j = 1:length(t_history)
+    plot(x(:), p_history(:, j), 'LineWidth', 1.5);
+    legend_entries{j} = sprintf('iter = %d', round(iter_history(j)));
+end
+
+plot(x, p_exact, ':k', 'LineWidth', 1.5);  % exact solution
+legend_entries{end} = 'Exact';
+
+xlabel('x'); ylabel('Pressure');
+title(['Pressure Distribution Snapshots ', name]);
+grid on;
+legend(legend_entries, 'Location', 'northwest');
+
+inset_pos = [0.55 0.25 0.3 0.3];  % [left, bottom, width, height] in normalized figure units
+ax_inset = axes('Position', inset_pos);
+box on; hold on;
+
+x_zoom_min = 4.35; x_zoom_max = 4.42;
+xlim(ax_inset, [x_zoom_min x_zoom_max]);
+
+for j = 1:length(t_history)
+    plot(ax_inset, x(:), p_history(:, j), 'LineWidth', 1);
+end
+plot(ax_inset, x(:), p_exact, ':k', 'LineWidth', 1.5);
+title(ax_inset, 'Zoom near shock');
+grid(ax_inset, 'on');
+
+% exportgraphics(gcf, 'A1-pres-2.png', 'Resolution', 300);
 
 
-  figure(8);
-  hold on;
-  legend_entries = cell(size(t_history));
-  for j = 1:length(t_history)
-      plot(x(:), rho_history(:, j), 'LineWidth', 1.5);
-      legend_entries{j} = sprintf('iter = %d', round(iter_history(j)));
-  end
-  xlabel('x'); ylabel('Density');
-  title(['Density Distribution Snapshots ', name]);
-  legend(legend_entries, 'Location', 'best');
-  grid on;
 
 
+figure(8);
+hold on;
+
+legend_entries = cell(length(t_history) + 1, 1);
+
+for j = 1:length(t_history)
+    plot(x(:), u_history(:, j), 'LineWidth', 1.5);
+    legend_entries{j} = sprintf('iter = %d', round(iter_history(j)));
+end
+
+plot(x, u_exact, ':k', 'LineWidth', 1.5);  % exact solution
+legend_entries{end} = 'Exact';
+
+xlabel('x'); ylabel('Velocity');
+title(['Velocity Distribution Snapshots ', name]);
+grid on;
+legend(legend_entries, 'Location', 'best');
+
+inset_pos = [0.55 0.25 0.3 0.3];  % [left, bottom, width, height] in normalized figure units
+ax_inset = axes('Position', inset_pos);
+box on; hold on;
+
+x_zoom_min = 3.84; x_zoom_max = 3.90;
+xlim(ax_inset, [x_zoom_min x_zoom_max]);
+
+for j = 1:length(t_history)
+    plot(ax_inset, x(:), u_history(:, j), 'LineWidth', 1);
+end
+plot(ax_inset, x(:), u_exact, ':k', 'LineWidth', 1.5);
+title(ax_inset, 'Zoom near shock');
+grid(ax_inset, 'on');
+
+% exportgraphics(gcf, 'A1-vel-2.png', 'Resolution', 300);
+
+figure(9);
+hold on;
+
+legend_entries = cell(length(t_history) + 1, 1);
+
+for j = 1:length(t_history)
+    plot(x(:), rho_history(:, j), 'LineWidth', 1.5);
+    legend_entries{j} = sprintf('iter = %d', round(iter_history(j)));
+end
+
+plot(x, rho_exact, ':k', 'LineWidth', 1.5);  % exact solution
+legend_entries{end} = 'Exact';
+
+xlabel('x'); ylabel('Density');
+title(['Density Distribution Snapshots ', name]);
+grid on;
+legend(legend_entries, 'Location', 'northwest');
+
+inset_pos = [0.55 0.25 0.3 0.3];  % [left, bottom, width, height] in normalized figure units
+ax_inset = axes('Position', inset_pos);
+box on; hold on;
+
+x_zoom_min = 4.35; x_zoom_max = 4.42;
+xlim(ax_inset, [x_zoom_min x_zoom_max]);
+
+for j = 1:length(t_history)
+    plot(ax_inset, x(:), rho_history(:, j), 'LineWidth', 1);
+end
+plot(ax_inset, x(:), rho_exact, ':k', 'LineWidth', 1.5);
+title(ax_inset, 'Zoom near shock');
+grid(ax_inset, 'on');
+
+
+% exportgraphics(gcf, 'A1-den-2.png', 'Resolution', 300);
+
+
+  % figure(8);
+  % hold on;
+  % legend_entries = cell(size(t_history));
+  % for j = 1:length(t_history)
+  %     plot(x(:), rho_history(:, j), 'LineWidth', 1.5);
+  %     legend_entries{j} = sprintf('iter = %d', round(iter_history(j)));
+  % end
+  % plot(x, rho_exact, ':', 'LineWidth', 1.5);
+  % legend_entries{end+1} = 'Exact';
+  % xlabel('x'); ylabel('Density');
+  % title(['Density Distribution Snapshots ', name]);
+  % legend(legend_entries, 'Location', 'best');
+  % grid on;
+
+
+  % figure(6);
+  % hold on;
+  % legend_entries = cell(size(t_history));
+  % for j = 1:length(t_history)
+  %     plot(x(:),u_history(:, j), 'LineWidth', 1.5);
+  %     legend_entries{j} = sprintf('iter = %d', round(iter_history(j)));
+  % end
+  % plot(x, u_exact, ':', 'LineWidth', 1.5);
+  % legend_entries{end+1} = 'Exact';
+  % xlabel('x'); ylabel('Velocity');
+  % title(['Velocity Distribution Snapshots ', name]);
+  % legend(legend_entries, 'Location', 'best');
+  % grid on;
 
 
   % final_error_list = [final_error_list, err_list(end)];

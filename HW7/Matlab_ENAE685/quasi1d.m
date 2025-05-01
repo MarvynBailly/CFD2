@@ -47,7 +47,7 @@ xsh = 4;      % location if use fixed shock location
 irefine = 4.5;          % change this parameter to refine the space mesh (and time)
 jmax = 40*irefine+1;  % number of mesh points along the nozzle
 % needed for time marching
-cfl = 0.90;           % Determines time step size, make less than 1
+cfl = 2.25;           % Determines time step size, make less than 1
 itsteady=1500*irefine;% number of iterations to perform to get steady initial solution
 imeth = 1;           % method (1=Steger-Warming)
 %
